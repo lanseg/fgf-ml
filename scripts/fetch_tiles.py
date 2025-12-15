@@ -3,6 +3,8 @@ import logging
 import math
 import os
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from multiprocessing import cpu_count
 from PIL import Image
 
 
@@ -54,43 +56,51 @@ EXT = "png"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+nprocs = cpu_count()
 
 def download_tile(z, x, y):
     url = f"{SOURCE}/{z}/{x}/{y}.{EXT}"
-    logger.info("URL: %s", url)
     resp = requests.get(url, timeout=10)
     resp.raise_for_status()
     img = Image.open(io.BytesIO(resp.content))
     img.load()
     return img
 
-# lat - long
+def save_tile(x, y, zoom):
+    targetDir = os.path.join(TARGET, str(zoom))
+    targetImage = os.path.join(targetDir, f"{x}_{y}.png")
+    tileId = f"zoom={zoom}, x={x}[{tileRange[1]}], y={y}[{tileRange[3]}]"
+    if os.path.exists(targetImage):
+        logger.info("Skipping tile %s to %s: already exists", tileId, targetImage)
+        return
+    logger.info("Downloading tile %s to %s", tileId, targetImage)
+    tile = download_tile(zoom, x, y)
+    extrema = tile.convert("L").getextrema()
+    if extrema[0] == extrema[1]:
+        logger.warning("Tile %s is empty", tileId)
+    tile.save(targetImage)
+
+bounds = {
+    "lat": (8.410956391303783, 9.001454022020148),
+    "lon": (47.168021083514404, 47.39871778943583)
+}
 topLeft = (47.54999199587565, 8.053970030592254)
 bottomRight = (47.12671318268564, 9.114606132179778)
 # topLeft = (45.7769477403, 6.02260949059)
 # bottomRight = (47.8308275417, 10.4427014502)
 
 logger.info("Fetching tiles")
-for zoom in range(16, 18):
+for zoom in range(16, 19):
     tileRange = tilesForBox(
-        topLeft[1], bottomRight[0], bottomRight[0], topLeft[1], zoom
+        min(*bounds["lat"]), max(*bounds["lon"]),
+        max(*bounds["lat"]), min(*bounds["lon"]),
+        zoom
     )
     logger.info("Fetcing tiles for zoom level %d: %s", zoom, tileRange)
     targetDir = os.path.join(TARGET, str(zoom))
     os.makedirs(targetDir, exist_ok=True)
-    for i, x in enumerate(range(tileRange[0], tileRange[1] + 1)):
-        for j, y in enumerate(range(tileRange[2], tileRange[3] + 1)):
-            targetImage = os.path.join(targetDir, f"{x}_{y}.png")
-            if os.path.exists(targetImage):
-                logger.info(
-                    "Skipping tile zoom=%d, x=%d, y=%d to %s: already exists",
-                    zoom, x, y, targetImage)
-                continue
-            logger.info(
-                "Downloading tile zoom=%d, x=%d, y=%d to %s",
-                zoom, x, y, targetImage)
-            tile = download_tile(zoom, x, y)
-            extrema = tile.convert("L").getextrema()
-            if extrema[0] == extrema[1]:
-                logger.warning("Tile zoom=%d, x=%d, y=%d is empty", zoom, x, y)
-            tile.save(targetImage)
+    with ThreadPoolExecutor(max_workers=nprocs) as executor:
+        for i, x in enumerate(range(tileRange[0], tileRange[1] + 1)):
+            for j, y in enumerate(range(tileRange[2], tileRange[3] + 1)):
+                executor.submit(save_tile, x, y, zoom)
+        executor.shutdown(wait=True)
