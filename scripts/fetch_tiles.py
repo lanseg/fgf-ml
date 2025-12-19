@@ -50,7 +50,7 @@ def tilesForBox(west, south, east, north, zoom):
 
 
 TILE_SIZE = 512
-SOURCE = f"http://localhost:8080/styles/basic-preview/{TILE_SIZE}"
+SOURCE = f"http://localhost:8080/styles/buildings/{TILE_SIZE}"
 TARGET = "./data/tiles"
 EXT = "png"
 
@@ -90,7 +90,7 @@ bottomRight = (47.12671318268564, 9.114606132179778)
 # bottomRight = (47.8308275417, 10.4427014502)
 
 logger.info("Fetching tiles")
-for zoom in range(16, 19):
+for zoom in range(15, 19):
     tileRange = tilesForBox(
         min(*bounds["lat"]), max(*bounds["lon"]),
         max(*bounds["lat"]), min(*bounds["lon"]),

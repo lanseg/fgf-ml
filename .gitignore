@@ -1,3 +1,6 @@
-data
+data/*mbtiles
+data/*osm.pbf
+data/tiles
 deps
-
+.venv
+.ruff_cache

@@ -1,0 +1,23 @@
+{
+  "options": {
+    "paths": {
+      "styles": "styles"
+    }
+  },
+  "styles": {
+    "common": {
+      "style": "common.json"
+    },
+    "buildings": {
+      "style": "buildings.json"
+    },
+    "transportation": {
+      "style": "transportation.json"
+    }
+  },
+  "data": {
+    "openmaptiles": {
+      "mbtiles": "switzerland-latest.mbtiles"
+    }
+  }
+}
