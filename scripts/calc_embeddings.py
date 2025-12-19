@@ -3,7 +3,7 @@ import json
 import logging
 import sys
 import torch
-import multiprocessing
+from multiprocessing import cpu_count
 from torchvision.transforms import Compose, Resize, Normalize
 from transformers import AutoImageProcessor, AutoModel
 from torch.utils.data import DataLoader, Subset, Dataset
@@ -11,15 +11,17 @@ from PIL import Image
 import faiss
 import numpy as np
 
-TILE_ROOT="data/tiles"
-batch_size = 16  # For DataLoader
-chunk_size = 1000  # Process this many tiles per chunk
+TILE_PATH = os.environ.get("TILE_PATH", "data/tiles")
+BATCH_SIZE = int(os.environ.get("BATCH_SIZE", "128"))
+CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE", "1000"))
+NUM_WORKERS = int(os.environ.get("NUM_WORKERS", str(cpu_count())))
+INDEX_PATH = os.environ.get("INDEX_PATH", "zurich_canton.index")
+CHECKPOINT_PATH = os.environ.get("CHECKPOINT_PATH", "checkpoint.json")
+
 dataloader_params = {
-    'batch_size': batch_size,
-    'num_workers': multiprocessing.cpu_count() - 1,
+    'batch_size': BATCH_SIZE,
+    'num_workers': NUM_WORKERS - 1,
 }
-checkpoint_path = "checkpoint.json"
-index_path = "zurich_canton.index"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -67,17 +69,28 @@ def loadDataset(tileRoot):
     return TileDataset(dataset)
 
 if __name__ == '__main__':
+    deviceType = "gpu" if torch.cuda.is_available() else "cpu"
+    device = torch.device(deviceType)
+    logger.info("Using device: %s", deviceType)
+    if deviceType == "gpu":
+        for i in range(torch.cuda.device_count()):
+            logger.info("\tGPU device [%d]: %s", i, torch.cuda.get_device_name(i))
+
+    logger.info("Loading model and processor...")
     processor = AutoImageProcessor.from_pretrained("facebook/dinov2-base")
-    model = AutoModel.from_pretrained("facebook/dinov2-base").eval()
-    dataset = loadDataset(TILE_ROOT)
-    index, checkpoint = loadIndex(index_path, checkpoint_path)
+    model = AutoModel.from_pretrained("facebook/dinov2-base").to(device).eval()
+    logger.info("Device: %s", deviceType)
+
+
+    dataset = loadDataset(TILE_PATH)
+    index, checkpoint = loadIndex(INDEX_PATH, CHECKPOINT_PATH)
     start_idx = checkpoint['last_processed'] + 1
     logger.info("Starting from tile %d", start_idx)
 
     total_tiles = len(dataset)
     # Process in chunks
-    for chunk_start in range(start_idx, total_tiles, chunk_size):
-        chunk_end = min(chunk_start + chunk_size, total_tiles)
+    for chunk_start in range(start_idx, total_tiles, CHUNK_SIZE):
+        chunk_end = min(chunk_start + CHUNK_SIZE, total_tiles)
         logger.info("Processing tiles %d to %d", chunk_start, chunk_end - 1)
 
         # Subset for this chunk
@@ -98,9 +111,9 @@ if __name__ == '__main__':
 
         # Save checkpoint and index
         checkpoint['last_processed'] = chunk_end - 1
-        with open(checkpoint_path, 'w') as f:
+        with open(CHECKPOINT_PATH, 'w') as f:
             json.dump(checkpoint, f)
-        faiss.write_index(index, index_path)
+        faiss.write_index(index, INDEX_PATH)
         logger.info("Checkpoint saved at %d", chunk_end)
 
     logger.info("Done.")

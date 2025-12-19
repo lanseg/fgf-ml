@@ -10,3 +10,4 @@
 3. Serve tile data separated by different layers, e.g. buildings, roads, water
 4. Generate tiles
 
+sudo apt install build-essential libboost-dev libboost-filesystem-dev libboost-program-options-dev libboost-system-dev libshp-dev libsqlite3-dev rapidjson-dev
