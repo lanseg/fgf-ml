@@ -34,7 +34,12 @@ What doesn't work (and I'm working on it now):
 1. PyTorch, Transformers: generate embedding vectors from the user input.
 2. Faiss: find the most similar indices
 
-# Running (detailed)
+# Running
+
+1. ```make fetch_tiles``` to generate the tiles for the area of interest
+2. ```cd scripts  && uv venv && uv sync``` to get fetch the dependencies and create a venv
+3. ```source scripts/.venv/bin/activate``` to activate venv
+4. ```python scripts/calc_embeddings``` to generate the index (region of interest is hardcoded)
 
 I tried to organize scripts with a Makefile and python dependencies into the pyproject.toml, but there are still some binary dependencies: lua, libboost, rapidjson, etc. For Debian/Ubuntu based distros it could be done with this command (taken from ):
 ```bash
