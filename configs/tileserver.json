@@ -1,0 +1,23 @@
+{
+  "options": {
+    "paths": {
+      "styles": "tileserver-styles"
+    }
+  },
+  "styles": {
+    "common": {
+      "style": "common.json"
+    },
+    "buildings": {
+      "style": "buildings.json"
+    },
+    "transportation": {
+      "style": "transportation.json"
+    }
+  },
+  "data": {
+    "openmaptiles": {
+      "mbtiles": "../data/tiles/switzerland-latest.mbtiles"
+    }
+  }
+}
