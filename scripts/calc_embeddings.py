@@ -69,10 +69,10 @@ def loadDataset(tileRoot):
     return TileDataset(dataset)
 
 if __name__ == '__main__':
-    deviceType = "gpu" if torch.cuda.is_available() else "cpu"
+    deviceType = "cuda" if torch.cuda.is_available() else "cpu"
     device = torch.device(deviceType)
     logger.info("Using device: %s", deviceType)
-    if deviceType == "gpu":
+    if deviceType == "cuda":
         for i in range(torch.cuda.device_count()):
             logger.info("\tGPU device [%d]: %s", i, torch.cuda.get_device_name(i))
 
@@ -99,7 +99,7 @@ if __name__ == '__main__':
 
         embeddings = []
         for batch in dataloader:
-            inputs = processor(images=batch, return_tensors="pt")
+            inputs = processor(images=batch, return_tensors="pt").to(device)
             with torch.no_grad():
                 batch_emb = model(**inputs).last_hidden_state[:, 0].cpu().numpy()
             embeddings.extend(batch_emb)

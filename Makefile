@@ -6,6 +6,9 @@ deps/tilemaker:
 deps/tilemaker/tilemaker: deps/tilemaker
 	cd deps/tilemaker && $(MAKE)
 
+deps/tileserver-gl:
+	mkdir -p deps
+	git clone https://github.com/maptiler/tileserver-gl deps/tileserver-gl
 
 # Geodata fetching and preparing
 data/switzerland-latest.osm.pbf:
@@ -22,7 +25,7 @@ data/switzerland-latest.mbtiles: data/switzerland-latest.osm.pbf deps/tilemaker/
 
 # Utility services
 tileserver-up: data/switzerland-latest.mbtiles
-	docker run -d --rm -v ./data:/data -p 8080:8080 --name tileserver maptiler/tileserver-gl:latest --file switzerland-latest.mbtiles
+	docker run -d --rm -v ./data:/data -p 8080:8080 --name tileserver maptiler/tileserver-gl:latest --config /data/config.json
 
 tileserver-down:
 	docker stop tileserver || true

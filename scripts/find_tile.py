@@ -40,16 +40,16 @@ def get_embedding(image_path):
 query_emb = get_embedding("search_sample.png")
 
 # Search: Get top-k distances and indices
-k = 100  # Top matches
+k = 10  # Top matches
 distances, indices = index.search(query_emb, k)
 
 allTiles = listTiles(TILE_ROOT)
 
 # Print results (distances close to 1 are good matches for IP/cosine)
 for i in range(k):
-    if distances[0][i] > 0.7:  # Example threshold; tune based on your data
+    if distances[0][i] > 0.5:  # Example threshold; tune based on your data
         logger.info("Match %d: Tile index %d, Score: %f, Path: %s",
-        i, indices[0][i], distances[0][i], allTiles[indices[0][i] + 1])
+        i, indices[0][i], distances[0][i], allTiles[indices[0][i]])
     else:
         break  # Stop at weak matches
 
