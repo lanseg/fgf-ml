@@ -67,3 +67,6 @@ $ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/deps/icu/icu/usr/local/lib/ n exec 22 x
 * [OSM Switzerland](https://download.geofabrik.de/europe/switzerland.html) - I used this as the main data source for my experiments.
 * [TileMaker](https://github.com/systemed/tilemaker) - many distros already have it.
 * [TileServer native dependencies](https://maptiler-tileserver.readthedocs.io/en/latest/installation.html#npm) - most distros don't have it, but you can find it on npm.
+
+export N_PREFIX=`pwd`/data/npm
+n 22 npm i

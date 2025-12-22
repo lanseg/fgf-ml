@@ -7,6 +7,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from multiprocessing import cpu_count
 from PIL import Image
 
+LAYER = os.environ.get("LAYER", "buildings")
+TARGET = os.environ.get("TARGET", "./data/tiles")
+TILESERVER = os.environ.get("TILESERVER", "http://localhost:8080")
+
+TILE_SIZE = 512
+EXT = "png"
 
 def tileToWgs84(x: int, y: int, zoom: int) -> (int, int, int, int):
     """
@@ -48,18 +54,12 @@ def tilesForBox(west, south, east, north, zoom):
     y_max = max(0, min(y_max, max_index))
     return x_min, x_max, y_min, y_max
 
-
-TILE_SIZE = 512
-SOURCE = f"http://localhost:8080/styles/buildings/{TILE_SIZE}"
-TARGET = "./data/tiles"
-EXT = "png"
-
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 nprocs = cpu_count()
 
 def download_tile(z, x, y):
-    url = f"{SOURCE}/{z}/{x}/{y}.{EXT}"
+    url = f"{TILESERVER}/styles/{LAYER}/{TILE_SIZE}/{z}/{x}/{y}.{EXT}"
     resp = requests.get(url, timeout=10)
     resp.raise_for_status()
     img = Image.open(io.BytesIO(resp.content))
