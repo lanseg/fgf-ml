@@ -1,6 +1,7 @@
-data/*mbtiles
-data/*osm.pbf
-data/tiles
+data
 deps
 .venv
 .ruff_cache
+__pycache__
+.python_version
+

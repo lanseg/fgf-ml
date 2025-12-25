@@ -1,12 +1,15 @@
 import logging
 import os
+import sys
 import torch
 import faiss
 import numpy as np
 from PIL import Image
 from transformers import AutoImageProcessor, AutoModel
 
-TILE_ROOT="data/tiles"
+INDEX_PATH = os.environ.get("INDEX_PATH", "zurich_canton.index")
+TILE_PATH = os.environ.get("TILE_PATH", "data/tiles")
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -16,8 +19,8 @@ processor = AutoImageProcessor.from_pretrained("facebook/dinov2-base")
 model = AutoModel.from_pretrained("facebook/dinov2-base").eval()  # Add .cuda() if GPU available
 
 # Load FAISS index
-index_path = "zurich_canton.index"
-index = faiss.read_index(index_path)
+logger.info("Loading index from %s", INDEX_PATH)
+index = faiss.read_index(INDEX_PATH)
 logger.info("Loaded index with %d vectors", index.ntotal)
 
 def listTiles(tileRoot):
@@ -37,13 +40,14 @@ def get_embedding(image_path):
     return emb / np.linalg.norm(emb)  # Normalize if not already (for IP/cosine)
 
 # Example: Query with user image
-query_emb = get_embedding("search_sample.png")
+query_emb = get_embedding(sys.argv[1])
 
 # Search: Get top-k distances and indices
 k = 10  # Top matches
 distances, indices = index.search(query_emb, k)
 
-allTiles = listTiles(TILE_ROOT)
+logger.info("Listing tile images in %s", TILE_PATH)
+allTiles = listTiles(TILE_PATH)
 
 # Print results (distances close to 1 are good matches for IP/cosine)
 for i in range(k):

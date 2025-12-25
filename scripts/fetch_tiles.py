@@ -58,12 +58,13 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 nprocs = cpu_count()
 
-def download_tile(z, x, y):
-    url = f"{TILESERVER}/styles/{LAYER}/{TILE_SIZE}/{z}/{x}/{y}.{EXT}"
-    resp = requests.get(url, timeout=10)
+def download_tile(source, target):
+    logger.info("Downloading %s to %s", source, target)
+    resp = requests.get(source, timeout=10)
     resp.raise_for_status()
     img = Image.open(io.BytesIO(resp.content))
     img.load()
+    img.save(target)
     return img
 
 def save_tile(x, y, zoom):
@@ -73,19 +74,17 @@ def save_tile(x, y, zoom):
     if os.path.exists(targetImage):
         logger.info("Skipping tile %s to %s: already exists", tileId, targetImage)
         return
-    logger.info("Downloading tile %s to %s", tileId, targetImage)
-    tile = download_tile(zoom, x, y)
+
+    url = f"{TILESERVER}/styles/{LAYER}/{TILE_SIZE}/{zoom}/{x}/{y}.{EXT}"
+    tile = download_tile(url, targetImage)
     extrema = tile.convert("L").getextrema()
     if extrema[0] == extrema[1]:
         logger.warning("Tile %s is empty", tileId)
-    tile.save(targetImage)
 
 bounds = {
-    "lat": (8.410956391303783, 9.001454022020148),
-    "lon": (47.168021083514404, 47.39871778943583)
+    "lat": (8.505112126975062, 8.578701322400356),
+    "lon": (47.33906390442888, 47.29551650612163)
 }
-topLeft = (47.54999199587565, 8.053970030592254)
-bottomRight = (47.12671318268564, 9.114606132179778)
 # topLeft = (45.7769477403, 6.02260949059)
 # bottomRight = (47.8308275417, 10.4427014502)
 

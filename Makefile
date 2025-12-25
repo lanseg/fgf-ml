@@ -27,7 +27,7 @@ data/tiles/switzerland-latest.mbtiles: data/osm/switzerland-latest.osm.pbf deps/
 	  --config configs/tilemaker-config.json \
 	  --process configs/tilemaker-process.lua \
 	  --input data/osm/switzerland-latest.osm.pbf \
-	  --output data/tiles/switzerland-latest.mbtiles
+	  --output data/osm/switzerland-latest.mbtiles
 
 # Utility services
 tileserver-up: data/tiles/switzerland-latest.mbtiles
