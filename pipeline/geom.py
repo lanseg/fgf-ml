@@ -27,13 +27,12 @@ def wgs84ToTile(lon: float, lat: float, zoom: int = ZOOM_1KM) -> (int, int):
     y = (1.0 - math.log(math.tan(lat_rad) + 1 / math.cos(lat_rad)) / math.pi) / 2.0 * n
     return int(x), int(y)
 
-def get_tile_bounds(items: list[osmium.osm.Node], zoom: int):
+def get_tile_bounds(items: list[osmium.osm.Location], zoom: int):
     if not items:
         return None
     lon = (360, -360)
     lat = (360, -360)
-    for item in items:
-        loc = item.location
+    for loc in items:
         lon = (min(lon[0], loc.lon), max(lon[1], loc.lon))
         lat = (min(lat[0], loc.lat), max(lat[1], loc.lat))
     tx0, ty0 = wgs84ToTile(lon[0], lat[0], zoom)
