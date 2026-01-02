@@ -14,6 +14,7 @@ TILESERVER = os.environ.get("TILESERVER", "http://localhost:8080")
 TILE_SIZE = 512
 EXT = "png"
 
+
 def tileToWgs84(x: int, y: int, zoom: int) -> (int, int, int, int):
     """
     Returns (west, south, east, north) in decimal degrees for the tile.
@@ -54,9 +55,13 @@ def tilesForBox(west, south, east, north, zoom):
     y_max = max(0, min(y_max, max_index))
     return x_min, x_max, y_min, y_max
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 nprocs = cpu_count()
+
 
 def download_tile(source, target):
     logger.info("Downloading %s to %s", source, target)
@@ -66,6 +71,7 @@ def download_tile(source, target):
     img.load()
     img.save(target)
     return img
+
 
 def save_tile(x, y, zoom):
     targetDir = os.path.join(TARGET, str(zoom))
@@ -81,9 +87,10 @@ def save_tile(x, y, zoom):
     if extrema[0] == extrema[1]:
         logger.warning("Tile %s is empty", tileId)
 
+
 bounds = {
     "lat": (8.505112126975062, 8.578701322400356),
-    "lon": (47.33906390442888, 47.29551650612163)
+    "lon": (47.33906390442888, 47.29551650612163),
 }
 # topLeft = (45.7769477403, 6.02260949059)
 # bottomRight = (47.8308275417, 10.4427014502)
@@ -91,9 +98,11 @@ bounds = {
 logger.info("Fetching tiles")
 for zoom in range(15, 19):
     tileRange = tilesForBox(
-        min(*bounds["lat"]), max(*bounds["lon"]),
-        max(*bounds["lat"]), min(*bounds["lon"]),
-        zoom
+        min(*bounds["lat"]),
+        max(*bounds["lon"]),
+        max(*bounds["lat"]),
+        min(*bounds["lon"]),
+        zoom,
     )
     logger.info("Fetcing tiles for zoom level %d: %s", zoom, tileRange)
     targetDir = os.path.join(TARGET, str(zoom))

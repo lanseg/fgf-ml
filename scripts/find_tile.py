@@ -10,25 +10,33 @@ from transformers import AutoImageProcessor, AutoModel
 INDEX_PATH = os.environ.get("INDEX_PATH", "zurich_canton.index")
 TILE_PATH = os.environ.get("TILE_PATH", "data/tiles")
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
 # Load model and processor (same as extraction)
 processor = AutoImageProcessor.from_pretrained("facebook/dinov2-base")
-model = AutoModel.from_pretrained("facebook/dinov2-base").eval()  # Add .cuda() if GPU available
+model = AutoModel.from_pretrained(
+    "facebook/dinov2-base"
+).eval()  # Add .cuda() if GPU available
 
 # Load FAISS index
 logger.info("Loading index from %s", INDEX_PATH)
 index = faiss.read_index(INDEX_PATH)
 logger.info("Loaded index with %d vectors", index.ntotal)
 
+
 def listTiles(tileRoot):
-    return sorted([
-        os.path.join(tileRoot, zoom, tile)
-        for zoom in os.listdir(tileRoot)
-        for tile in os.listdir(os.path.join(tileRoot, zoom))
-    ])
+    return sorted(
+        [
+            os.path.join(tileRoot, zoom, tile)
+            for zoom in os.listdir(tileRoot)
+            for tile in os.listdir(os.path.join(tileRoot, zoom))
+        ]
+    )
+
 
 # Function to get embedding from an image file
 def get_embedding(image_path):
@@ -38,6 +46,7 @@ def get_embedding(image_path):
         outputs = model(**inputs)
         emb = outputs.last_hidden_state[:, 0].cpu().numpy()  # CLS token, shape (1, 768)
     return emb / np.linalg.norm(emb)  # Normalize if not already (for IP/cosine)
+
 
 # Example: Query with user image
 query_emb = get_embedding(sys.argv[1])
@@ -52,8 +61,13 @@ allTiles = listTiles(TILE_PATH)
 # Print results (distances close to 1 are good matches for IP/cosine)
 for i in range(k):
     if distances[0][i] > 0.5:  # Example threshold; tune based on your data
-        logger.info("Match %d: Tile index %d, Score: %f, Path: %s",
-        i, indices[0][i], distances[0][i], allTiles[indices[0][i]])
+        logger.info(
+            "Match %d: Tile index %d, Score: %f, Path: %s",
+            i,
+            indices[0][i],
+            distances[0][i],
+            allTiles[indices[0][i]],
+        )
     else:
         break  # Stop at weak matches
 

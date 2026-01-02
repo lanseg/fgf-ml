@@ -1,34 +1,38 @@
-import argparse
+from collections.abc import Generator
+from dataclasses import dataclass
 import logging
 import os
 
+from shapely import Geometry
 import geopandas as gpd
 import duckdb
 
 import geom
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
-
 PROJ = "WGS84"
 
 
-def save_tile(target, batch):
+@dataclass
+class OsmObject:
+    id: str
+    geom: Geometry
 
-    for rbatch in batch:
-        df = rbatch.to_pandas()
-        gdf = gpd.GeoDataFrame(
-            df.drop(columns=["geom"]), geometry=gpd.array.from_wkb(df["geom"], crs=PROJ)
-        )
-        gdf.to_file(target, driver="GeoJSON")
+
+@dataclass
+class Tile:
+    x: int
+    y: int
+    zoom: int
+    objects: list[OsmObject]
 
 
 def get_tiles(
     db_path: str,
     target: str,
-    tile_size_km: int,
+    tile_size_km: float,
     bounds: tuple[float, float, float, float] | None = None,
-):
+) -> Generator[Tile]:
     zoom = geom.km_to_zoom(tile_size_km)
     tiles_per_axis = 2**zoom
     logger.info(
@@ -57,26 +61,10 @@ def get_tiles(
                      FROM osm
                      WHERE ST_Intersects(geometry, ST_GeomFromText(?))"""
             batch = conn.execute(sql, (envelope,)).fetch_record_batch()
-            save_tile(f"{target}/{x}_{y}_{zoom}.jsonl", batch)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Generate tile stream tiles from .pbf file.")
-    parser.add_argument("db_path", type=str, help="Path to the OSM .pbf file")
-    parser.add_argument("target", type=str, help="Target where to dump the tiles (only geojson for now)")
-    parser.add_argument("--tile_size_km", type=float, help="Tile size in km (e.g., 10)")
-    parser.add_argument(
-        "--bounds",
-        help="Region bounds as four comma-separated floats: lon,lat,lon,lat",
-    )
-    args = parser.parse_args()
-
-    bounds = None
-    if args.bounds:
-        bound_values = list(map(float, args.bounds.split(",")))
-        lons = [bound_values[0], bound_values[2]]
-        lats = [bound_values[1], bound_values[3]]
-        bounds = (min(*lats), max(*lons), max(*lats), min(*lons))
-        logger.info("using bounds %s", bound_values)
-
-    get_tiles(args.db_path, args.target, args.tile_size_km, bounds)
+            objects = []
+            for rbatch in batch:
+                df = rbatch.to_pandas()
+                df["geom"] = gpd.array.from_wkb(df["geom"], crs=PROJ)
+                for tuple in df.itertuples():
+                    objects.append(OsmObject(tuple[1], tuple[2]))
+            yield Tile(x, y, zoom, objects)
