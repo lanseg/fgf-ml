@@ -3,6 +3,16 @@
 Here I'm trying to build a pipeline that takes an OSM file, slices it into tiles, transforms in many
 ways and generates embedding vectors from it.
 
+# Current status
+
+So, streaming a database as a sequence of x/y/zoom tiles and distortion works ok, so I'm exploring
+various ways of generating feature vectors for a set of gemetries:
+1. Image moments or fourier descriptors. Not so robust, but invariant to some of the affine
+transformations and I will need to generate less transformations.
+2. Graph neural networks: should be better, but not as simple as image moments and requires more
+research.
+
+
 # Workflow
 1. Convert osm.pbf to GeoParquet file
 ```bash

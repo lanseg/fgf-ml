@@ -1,7 +1,6 @@
 from collections.abc import Generator
 from dataclasses import dataclass
 import logging
-import os
 
 from shapely import Geometry
 import geopandas as gpd

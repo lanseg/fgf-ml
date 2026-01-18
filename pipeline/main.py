@@ -1,14 +1,14 @@
 import argparse
-import itertools
 import logging
-
-import shapely
-import tilesource
-import process
 
 import matplotlib.pyplot as plt
 from matplotlib import patches
 from matplotlib.path import Path
+import shapely
+
+import tilesource
+import process
+import features
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
@@ -19,7 +19,7 @@ def drawGeoms(ax, geoms, style='g'):
   for geom in geoms:
     if isinstance(geom, shapely.geometry.LineString):
       codes = [Path.MOVETO]
-      for coord in geom.coords[1:]:
+      for _ in geom.coords[1:]:
         codes.append(Path.LINETO)
       ax.add_patch(patches.PathPatch(Path(geom.coords, codes), facecolor='none', lw=2))
     else:
@@ -49,12 +49,14 @@ if __name__ == "__main__":
     baseTiles = tilesource.get_tiles(args.db_path, args.tile_size_km, bounds)
     sliced = process.slice(baseTiles)
     variants = list(process.variants(sliced))
+    hhu = features.moments_hu(variants[0].objects[0].geom)
+    print(hhu)
 
-    for v in variants:
-        logger.info("tile %d/%d/%d has %d objects", v.x, v.y, v.zoom, len(v.objects))
-    vars = variants[0:10]
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20, 20))
-    for i, t in enumerate(vars):
-        drawGeoms(ax, [o.geom for o in t.objects], ['r', 'g', 'b'][ i % 3])
-    plt.show()
+    # for v in variants:
+    #     logger.info("tile %d/%d/%d has %d objects", v.x, v.y, v.zoom, len(v.objects))
+    # vars = variants[0:10]
+    # fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20, 20))
+    # for i, t in enumerate(vars):
+    #     drawGeoms(ax, [o.geom for o in t.objects], ['r', 'g', 'b'][ i % 3])
+    # plt.show()
 
