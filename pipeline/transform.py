@@ -52,10 +52,9 @@ def fit(g: Geometry, target: tuple[float, float, float, float]) -> Geometry:
     )
     return affine_transform(g, mtotr(m))
 
-
 def variants(g: Geometry) -> list[Geometry]:
-    angles = [np.pi / 20, np.pi / 10, -np.pi / 10, np.pi / 2, -np.pi / 2]
-    scales = [(0.75, 0.75), (0.75, 1), (1, 0.75), (1.25, 1), (1, 1.25)]
+    angles = [np.pi / 4, - np.pi / 4, np.pi / 2, -np.pi / 2]
+    scales = [(0.75, 1), (1, 0.75), (1.25, 1), (1, 1.25)]
     reflects = [(-1, 1), (1, -1), (-1, -1)]
     result = []
     for r in reflects:

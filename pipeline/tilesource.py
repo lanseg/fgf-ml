@@ -16,6 +16,7 @@ PROJ = "WGS84"
 @dataclass
 class OsmObject:
     id: str
+    tags: dict[str, str]
     geom: Geometry
 
 
@@ -29,7 +30,6 @@ class Tile:
 
 def get_tiles(
     db_path: str,
-    target: str,
     tile_size_km: float,
     bounds: tuple[float, float, float, float] | None = None,
 ) -> Generator[Tile]:
@@ -49,15 +49,11 @@ def get_tiles(
     if bounds:
         x_min, x_max, y_min, y_max = geom.tiles_for_box(*bounds, zoom)
 
-    if not os.path.exists(target):
-        logger.info("creating target directory")
-        os.makedirs(target, exist_ok=True)
-
     for x in range(x_min, x_max + 1):
         for y in range(y_min, y_max + 1):
             logger.info("fetching tile [%d, %d, %d]", x, y, zoom)
             envelope = geom.envelope_wkt(x, y, zoom)
-            sql = """SELECT feature_id, ST_AsWKB(geometry) AS geom
+            sql = """SELECT feature_id, ST_AsWKB(geometry) AS geom, tags
                      FROM osm
                      WHERE ST_Intersects(geometry, ST_GeomFromText(?))"""
             batch = conn.execute(sql, (envelope,)).fetch_record_batch()
@@ -66,5 +62,5 @@ def get_tiles(
                 df = rbatch.to_pandas()
                 df["geom"] = gpd.array.from_wkb(df["geom"], crs=PROJ)
                 for tuple in df.itertuples():
-                    objects.append(OsmObject(tuple[1], tuple[2]))
+                    objects.append(OsmObject(id=tuple[1], geom=tuple[2], tags=dict(tuple[3])))
             yield Tile(x, y, zoom, objects)

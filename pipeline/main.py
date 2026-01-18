@@ -1,12 +1,29 @@
 import argparse
+import itertools
 import logging
 
+import shapely
 import tilesource
+import process
+
+import matplotlib.pyplot as plt
+from matplotlib import patches
+from matplotlib.path import Path
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
 )
 logger = logging.getLogger("main")
+
+def drawGeoms(ax, geoms, style='g'):
+  for geom in geoms:
+    if isinstance(geom, shapely.geometry.LineString):
+      codes = [Path.MOVETO]
+      for coord in geom.coords[1:]:
+        codes.append(Path.LINETO)
+      ax.add_patch(patches.PathPatch(Path(geom.coords, codes), facecolor='none', lw=2))
+    else:
+      ax.fill(*geom.exterior.xy, style)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate tile stream tiles from .pbf file.")
@@ -29,7 +46,15 @@ if __name__ == "__main__":
         bounds = (min(*lats), max(*lons), max(*lats), min(*lons))
         logger.info("using bounds %s", bound_values)
 
-    for tile in tilesource.get_tiles(args.db_path, args.target, args.tile_size_km, bounds):
-        logger.info(
-            "tile [x=%d, y=%d, zoom=%d]: %d geoms", tile.x, tile.y, tile.zoom, len(tile.objects)
-        )
+    baseTiles = tilesource.get_tiles(args.db_path, args.tile_size_km, bounds)
+    sliced = process.slice(baseTiles)
+    variants = list(process.variants(sliced))
+
+    for v in variants:
+        logger.info("tile %d/%d/%d has %d objects", v.x, v.y, v.zoom, len(v.objects))
+    vars = variants[0:10]
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20, 20))
+    for i, t in enumerate(vars):
+        drawGeoms(ax, [o.geom for o in t.objects], ['r', 'g', 'b'][ i % 3])
+    plt.show()
+
