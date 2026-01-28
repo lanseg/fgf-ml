@@ -1,6 +1,7 @@
+from collections.abc import Generator
 import numpy as np
 from shapely import bounds
-from shapely import Geometry
+from shapely import Geometry, GeometryCollection
 from shapely.affinity import affine_transform
 from collections import namedtuple
 
@@ -52,16 +53,17 @@ def fit(g: Geometry, target: tuple[float, float, float, float]) -> Geometry:
     )
     return affine_transform(g, mtotr(m))
 
+
 def normalize(g: Geometry) -> Geometry:
     return fit(g, (0, 0, 1, 1))
 
-def variants(g: Geometry) -> list[Geometry]:
-    angles = [np.pi / 4, - np.pi / 4, np.pi / 2, -np.pi / 2]
+
+def variants(geoms: list[Geometry]) -> Generator[Geometry]:
+    g = GeometryCollection(geoms)
+    angles = [np.pi / 4, -np.pi / 4, np.pi / 2, -np.pi / 2]
     scales = [(0.75, 1), (1, 0.75), (1.25, 1), (1, 1.25)]
     reflects = [(-1, 1), (1, -1), (-1, -1)]
-    result = []
     for r in reflects:
         for s in scales:
             for a in angles:
-                result.append(apply(g, [rotate(a), scale(s[0], s[1]), mirror(r[0], r[1])]))
-    return result
+                yield apply(g, [rotate(a), scale(s[0], s[1]), mirror(r[0], r[1])])
