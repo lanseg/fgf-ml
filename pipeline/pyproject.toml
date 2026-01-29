@@ -9,11 +9,13 @@ dependencies = [
     "faiss-cpu>=1.13.2",
     "geopandas>=1.1.2",
     "matplotlib>=3.10.8",
+    "noise>=1.2.2",
     "osmium>=4.2.0",
     "pandas>=2.3.3",
     "pyarrow>=22.0.0",
     "pyproj>=3.7.2",
     "scikit-image>=0.26.0",
+    "scipy>=1.17.0",
     "shapely>=2.1.2",
 ]
 

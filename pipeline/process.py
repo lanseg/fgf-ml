@@ -1,8 +1,7 @@
 from collections.abc import Generator
 
+import distort
 import shapely
-
-import transform
 import tilesource
 
 
@@ -21,7 +20,8 @@ def slice(tile: Generator[tilesource.Tile]) -> Generator[tilesource.Tile]:
 
 
 def make_variants(tile: tilesource.Tile) -> Generator[tilesource.Tile]:
-    for g in transform.variants(shapely.GeometryCollection([t.geom for t in tile.objects])):
+    distorted = list(distort.variants([t.geom for t in tile.objects]))
+    for g in [shapely.GeometryCollection(distorted)]:
         yield tilesource.Tile(
             tile.x,
             tile.y,
