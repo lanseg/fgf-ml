@@ -22,7 +22,10 @@ def drawGeoms(ax, geoms, style="g"):
             for _ in geom.coords[1:]:
                 codes.append(Path.LINETO)
             ax.add_patch(patches.PathPatch(Path(geom.coords, codes), facecolor="none", lw=2))
-        else:
+        elif isinstance(geom, shapely.geometry.MultiPolygon):
+            for poly in geom.geoms:
+                ax.fill(*poly.exterior.xy, style)
+        elif isinstance(geom, shapely.geometry.Polygon):
             ax.fill(*geom.exterior.xy, style)
 
 
@@ -53,8 +56,7 @@ if __name__ == "__main__":
 
     for v in variants:
         logger.info("tile %d/%d/%d has %d objects", v.x, v.y, v.zoom, len(v.objects))
-    vars = variants[0:1]
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20, 20))
-    for i, t in enumerate(vars):
+    for i, t in enumerate(variants):
         drawGeoms(ax, [o.geom for o in t.objects], ["r", "g", "b"][i % 3])
     plt.show()

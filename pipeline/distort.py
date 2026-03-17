@@ -1,18 +1,14 @@
 import numpy as np
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
 from shapely import Geometry
-from shapely.geometry import (
-    GeometryCollection,
-    Polygon,
-    LinearRing,
-)
+from shapely.geometry import Polygon, LinearRing
 
 from scipy.ndimage import gaussian_filter1d
 from noise import pnoise1
 
 
 
-def diagBbox(points):
+def diagBBox(points):
     return np.hypot(
         points[:, 0].max() - points[:, 0].min(), points[:, 1].max() - points[:, 1].min()
     )
@@ -32,7 +28,7 @@ def jitter(points: np.ndarray, scale: float = 0.005, rng: np.random.Generator = 
     """Randomly shift each point."""
     if rng is None:
         rng = np.random.default_rng()
-    jitter = rng.normal(scale=scale * diagBbox(points), size=points.shape)
+    jitter = rng.normal(scale=scale * diagBBox(points), size=points.shape)
     return points + jitter
 
 
@@ -45,7 +41,7 @@ def wobble(
     `frequency` controls how many wiggles appear per unit length.
     """
     rng = np.random.default_rng(seed)
-    diag = diagBbox(points)
+    diag = diagBBox(points)
 
     result = points.copy()
     n = len(points)
@@ -76,11 +72,11 @@ def smooth(points: np.ndarray, sigma: float = 1.0) -> np.ndarray:
     return np.column_stack([xs, ys])
 
 
-def distort(
+def _distort(
     poly: Polygon,
     n_resample: int = 50,
-    jitter_scale: float = 0.008,
-    wobble_amp: float = 0.003,
+    jitter_scale: float = 0.01,
+    wobble_amp: float = 0.005,
     wobble_freq: float = 2.0,
     smooth_sigma: float = 0.8,
     rng: np.random.Generator = None,
@@ -102,9 +98,9 @@ def distort(
     return hand_poly
 
 
-def variants(geoms: list[Geometry]) -> Generator[Geometry]:
+def distort_geoms(geoms: Iterable[Geometry]) -> Generator[Geometry]:
     for g in geoms:
         if isinstance(g, Polygon):
-            yield distort(g)
+            yield _distort(g)
         else:
-            yield GeometryCollection([g])
+            yield g

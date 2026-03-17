@@ -67,3 +67,11 @@ python ./pipeline/tilesource.py \
   --bounds 47.38045731812224,8.535970015573549,47.37542289788745,8.544161611386535 \
   ./data/osm/switzerland-latest.duckdb ./tmp/dumptiles
 ```
+
+# Generating vectors and learning data
+
+## Geometry distortion
+
+To make
+
+## Subset selection

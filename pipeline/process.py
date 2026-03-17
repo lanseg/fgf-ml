@@ -20,17 +20,16 @@ def slice(tile: Generator[tilesource.Tile]) -> Generator[tilesource.Tile]:
 
 
 def make_variants(tile: tilesource.Tile) -> Generator[tilesource.Tile]:
-    distorted = list(distort.variants([t.geom for t in tile.objects]))
-    for g in [shapely.GeometryCollection(distorted)]:
-        yield tilesource.Tile(
-            tile.x,
-            tile.y,
-            tile.zoom,
-            objects=[
-                tilesource.OsmObject(tile.objects[i].id, tile.objects[i].tags, g.geoms[i])
-                for i in range(len(tile.objects))
-            ],
-        )
+    distorted = list(distort.distort_geoms([t.geom for t in tile.objects]))
+    yield tilesource.Tile(
+        tile.x,
+        tile.y,
+        tile.zoom,
+        objects=[
+            tilesource.OsmObject(tile.objects[i].id, tile.objects[i].tags, g)
+            for i, g in enumerate(distorted)
+        ],
+    )
 
 
 def variants(tile: Generator[tilesource.Tile]) -> Generator[tilesource.Tile]:
