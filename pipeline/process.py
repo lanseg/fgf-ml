@@ -2,6 +2,7 @@ from collections.abc import Generator
 
 import distort
 import shapely
+import subsets
 import tilesource
 
 
@@ -20,16 +21,24 @@ def slice(tile: Generator[tilesource.Tile]) -> Generator[tilesource.Tile]:
 
 
 def make_variants(tile: tilesource.Tile) -> Generator[tilesource.Tile]:
-    distorted = list(distort.distort_geoms([t.geom for t in tile.objects]))
+    distorted = [
+        tilesource.OsmObject(tile.objects[i].id, tile.objects[i].tags, g)
+        for i, g in enumerate(distort.distort_geoms([t.geom for t in tile.objects]))
+    ]
     yield tilesource.Tile(
         tile.x,
         tile.y,
         tile.zoom,
-        objects=[
-            tilesource.OsmObject(tile.objects[i].id, tile.objects[i].tags, g)
-            for i, g in enumerate(distorted)
-        ],
+        objects=distorted,
     )
+    for root, neighbors in subsets.group_neighbors([o.geom for o in tile.objects]).items():
+        yield tilesource.Tile(
+            tile.x,
+            tile.y,
+            tile.zoom,
+            objects=[
+                distorted[i] for i in neighbors
+            ] + [distorted[root]])
 
 
 def variants(tile: Generator[tilesource.Tile]) -> Generator[tilesource.Tile]:
