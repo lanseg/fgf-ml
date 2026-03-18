@@ -6,6 +6,7 @@ from matplotlib import patches
 from matplotlib.path import Path
 import shapely
 
+
 import tilesource
 import process
 
@@ -56,9 +57,16 @@ if __name__ == "__main__":
 
     for v in variants:
         logger.info("tile %d/%d/%d has %d objects", v.x, v.y, v.zoom, len(v.objects))
+    print("total variants: ", len(variants))
+    variants = variants[:50]
     colcount = 4
     rowcount = len(variants) // colcount + 1
     fig, ax = plt.subplots(nrows=rowcount, ncols=colcount, figsize=(5 * rowcount, 20))
     for i, t in enumerate(variants):
-        drawGeoms(ax[i // colcount, i % colcount], [o.geom for o in t.objects], ["r", "g", "b"][i % 3])
+        axx = ax[i // colcount, i % colcount]
+        axx.set_xticklabels([])
+        axx.set_yticklabels([])
+        axx.set_xticks([])
+        axx.set_yticks([])
+        drawGeoms(axx, [o.geom for o in t.objects], ["r", "g", "b"][i % 3])
     plt.show()

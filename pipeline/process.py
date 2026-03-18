@@ -25,20 +25,10 @@ def make_variants(tile: tilesource.Tile) -> Generator[tilesource.Tile]:
         tilesource.OsmObject(tile.objects[i].id, tile.objects[i].tags, g)
         for i, g in enumerate(distort.distort_geoms([t.geom for t in tile.objects]))
     ]
-    yield tilesource.Tile(
-        tile.x,
-        tile.y,
-        tile.zoom,
-        objects=distorted,
-    )
-    for root, neighbors in subsets.group_neighbors([o.geom for o in tile.objects]).items():
-        yield tilesource.Tile(
-            tile.x,
-            tile.y,
-            tile.zoom,
-            objects=[
-                distorted[i] for i in neighbors
-            ] + [distorted[root]])
+    yield tilesource.Tile(tile.x, tile.y, tile.zoom, objects=distorted)
+    for group in subsets.get_neighbors([o.geom for o in tile.objects]):
+        print(group)
+        yield tilesource.Tile(tile.x, tile.y, tile.zoom, objects=[distorted[i] for i in group])
 
 
 def variants(tile: Generator[tilesource.Tile]) -> Generator[tilesource.Tile]:

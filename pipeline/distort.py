@@ -7,7 +7,6 @@ from scipy.ndimage import gaussian_filter1d
 from noise import pnoise1
 
 
-
 def diagBBox(points):
     return np.hypot(
         points[:, 0].max() - points[:, 0].min(), points[:, 1].max() - points[:, 1].min()
