@@ -1,6 +1,5 @@
 # ML-Tiles
-Generate raster tiles for machine learning, sliced by layer if needed. Part of my bigger experiment
-I use to study ML and GIS, "Finding place in the world by description or a freeform sketch".
+My experiment, "Finding place in the world by description or a freeform sketch".
 
 Computational geometry methods, like finding an affine transformation that gives best Jaccard metric
 for each tile are precise but slow - with some basic parallelization it takes several minutes to do
@@ -10,22 +9,14 @@ The best way to make my project scale and still be suitable for a local run was 
 so my script could quickly generate a list of search candidates and reduce number of tiles to check
 from billions to thousands (which is an acceptable amount for the Affine/Jaccard search).
 
-# Pipeline experiment
-
-Here I'm trying to build a pipeline that takes an OSM file, slices it into tiles, transforms in many
-ways and generates embedding vectors from it.
-
 # Current status
 
-So, streaming a database as a sequence of x/y/zoom tiles and distortion works ok, so I'm exploring
-various ways of generating feature vectors for a set of gemetries:
-1. Image moments or fourier descriptors. Not so robust, but invariant to some of the affine
-transformations and I will need to generate less transformations.
-2. Graph neural networks: should be better, but not as simple as image moments and requires more
-research.
-
+I implemented a feature vector generation and the indexing, now I'm going to try vectorizing the user input and searching for the candidates in the database.
 
 # Workflow
+
+## Preparing the source data
+
 1. Convert osm.pbf to GeoParquet file
 ```bash
 pip install quackosm[cli] # In your venv
@@ -67,3 +58,26 @@ python ./pipeline/tilesource.py \
   --bounds 47.38045731812224,8.535970015573549,47.37542289788745,8.544161611386535 \
   ./data/osm/switzerland-latest.duckdb ./tmp/dumptiles
 ```
+
+## Building the vector index
+
+The main idea is to generate multiple versions of each tile: deformed and distorted in many different ways (because sketches are expected to be imprecise), with only portion of the geometries (because I can't expect an user to draw all buildings in the area), etc.
+
+So, for each tile there are several hundred vectors that represent different variants of the tile.
+
+### Distortion and transformation
+
+*TODO: Add note on making the polygons wobbly, shaky and somewhat similar to a man made drawing*
+
+### Subset selection
+
+*TODO: Add numbers and the reason for the subset selection*
+
+1. Build a Delaunnay triangulation from the building centroids, the centroids are vertices and the triangle edges are the graph edges.
+2. For each building/geometry take itself and the adjacent nodes.
+
+### Vectorizing the geometries
+
+1. Normalize the tile, scale it to fit into the square [-1, -1, 1, 1]. That's probably not needed at the current state, but any feature vector generation will be done for the normalized tile anyway.
+2. Calculating Hu moments: Rasterize the tile and calculate the image moments.
+3. Write those vectors with the tile id's into a faiss index.

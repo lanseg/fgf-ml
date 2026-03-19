@@ -27,7 +27,6 @@ def make_variants(tile: tilesource.Tile) -> Generator[tilesource.Tile]:
     ]
     yield tilesource.Tile(tile.x, tile.y, tile.zoom, objects=distorted)
     for group in subsets.get_neighbors([o.geom for o in tile.objects]):
-        print(group)
         yield tilesource.Tile(tile.x, tile.y, tile.zoom, objects=[distorted[i] for i in group])
 
 
