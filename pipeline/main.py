@@ -52,7 +52,8 @@ if __name__ == "__main__":
 
     baseTiles = tilesource.get_tiles(args.db_path, args.tile_size_km, bounds)
     sliced = process.slice(baseTiles)
-    variants = list(process.variants(sliced))
+    united = process.unite(sliced)
+    variants = list(process.variants(united))
 
     quantizer = faiss.IndexFlatL2(features.VECTOR_LENGTH)
     index = faiss.IndexIDMap(quantizer)

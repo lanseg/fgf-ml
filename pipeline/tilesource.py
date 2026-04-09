@@ -20,6 +20,11 @@ class OsmObject:
 
 
 @dataclass
+class UnitedOsmObject(OsmObject):
+    original: list[str]
+
+
+@dataclass
 class Tile:
     x: int
     y: int
@@ -48,9 +53,12 @@ def get_tiles(
     if bounds:
         x_min, x_max, y_min, y_max = geom.tiles_for_box(*bounds, zoom)
 
+    x_min = 17045
+    x_max = 17423
+    y_min = 11509
+    y_max = 11675
     for x in range(x_min, x_max + 1):
         for y in range(y_min, y_max + 1):
-            logger.info("fetching tile [%d, %d, %d]", x, y, zoom)
             envelope = geom.envelope_wkt(x, y, zoom)
             sql = """SELECT feature_id, ST_AsWKB(geometry) AS geom, tags
                      FROM osm
@@ -62,4 +70,14 @@ def get_tiles(
                 df["geom"] = gpd.array.from_wkb(df["geom"], crs=PROJ)
                 for tuple in df.itertuples():
                     objects.append(OsmObject(id=tuple[1], geom=tuple[2], tags=dict(tuple[3])))
-            yield Tile(x, y, zoom, objects)
+            logger.info(
+                "loaded tile %d[%d]/%d[%d]/%d with %d objects",
+                x,
+                x_max,
+                y,
+                y_max,
+                zoom,
+                len(objects),
+            )
+            if objects:
+                yield Tile(x, y, zoom, objects)

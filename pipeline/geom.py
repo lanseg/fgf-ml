@@ -1,5 +1,9 @@
 import math
+
 import osmium
+import shapely
+
+from shapely import strtree
 
 ZOOM_1KM = 14
 WEB_MERCATOR_RADIUS = 6378137.0
@@ -77,3 +81,31 @@ def envelope_wkt(x: int, y: int, zoom: int) -> str:
     """Return the tile envelope as a WKT POLYGON (used directly in DuckDB)."""
     xmin, ymin, xmax, ymax = tile_to_wgs84(x, y, zoom)
     return f"POLYGON(({xmin} {ymin}, {xmax} {ymin}, {xmax} {ymax}, {xmin} {ymax}, {xmin} {ymin}))"
+
+
+def mapping_union(geoms: list[shapely.Geometry]) -> list[tuple[shapely.Geometry, list[int]]]:
+    """
+    Returns a list of (new_component, list_of_original_geometries_that_form_it)
+    """
+    if not geoms:
+        return []
+
+    unioned = shapely.unary_union(geoms)
+    components = (
+        unioned.geoms
+        if unioned.geom_type == "GeometryCollection" or unioned.geom_type == "MultiPolygon"
+        else [unioned]
+    )
+
+    if not components:
+        return []
+
+    tree = strtree.STRtree(geoms)
+
+    result = []
+    for component in components:
+        intersecting_indices = tree.query(component, predicate="intersects")
+        intersecting_indices.sort()
+        result.append((component, intersecting_indices))
+
+    return result
