@@ -101,11 +101,7 @@ def mapping_union(geoms: list[shapely.Geometry]) -> list[tuple[shapely.Geometry,
         return []
 
     tree = strtree.STRtree(geoms)
-
-    result = []
-    for component in components:
-        intersecting_indices = tree.query(component, predicate="intersects")
-        intersecting_indices.sort()
-        result.append((component, intersecting_indices))
-
-    return result
+    return [
+        (component, sorted(tree.query(component, predicate="intersects")))
+        for component in components
+    ]

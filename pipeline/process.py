@@ -2,10 +2,12 @@ from collections.abc import Generator
 
 import distort
 import geom
+import logging
 import shapely
 import subsets
 import tilesource
 
+logger = logging.getLogger("process")
 
 def slice_tile(tile: tilesource.Tile) -> Generator[tilesource.Tile]:
     objects = [
@@ -52,7 +54,7 @@ def make_variants(tile: tilesource.Tile) -> Generator[tilesource.Tile]:
     ]
     yield tilesource.Tile(tile.x, tile.y, tile.zoom, objects=distorted)
     if len(tile.objects) > 500:
-        print("OOPS-VARIANTS", tile.x, tile.y, tile.zoom)
+        logger.info("too many variants for tile at [%d/%d/%d]: %d", tile.x, tile.y, tile.zoom)
     for i, group in enumerate(subsets.get_neighbors([o.geom for o in tile.objects])):
         yield tilesource.Tile(tile.x, tile.y, tile.zoom, objects=[distorted[i] for i in group])
 

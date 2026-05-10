@@ -53,10 +53,6 @@ def get_tiles(
     if bounds:
         x_min, x_max, y_min, y_max = geom.tiles_for_box(*bounds, zoom)
 
-    x_min = 17045
-    x_max = 17423
-    y_min = 11509
-    y_max = 11675
     for x in range(x_min, x_max + 1):
         for y in range(y_min, y_max + 1):
             envelope = geom.envelope_wkt(x, y, zoom)

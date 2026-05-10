@@ -14,15 +14,14 @@ def _powerset(iterable):
     return powerset
 
 
-def _triangulate(points: list[tuple[float, float]]) -> dict[int, set[int]]:
+def _triangulate(points: list[tuple[float, float]]) -> list[tuple[int, set[int]]]:
     tri = Delaunay(points)
     grouped = collections.defaultdict(set)
-    for s in tri.simplices:
-        s = list(map(int, s))
-        grouped[s[0]].update([s[1], s[2]])
-        grouped[s[1]].update([s[0], s[2]])
-        grouped[s[2]].update([s[1], s[0]])
-    return grouped
+    for i, j, k in tri.simplices:
+        grouped[i] |= {j, k}
+        grouped[j] |= {i, k}
+        grouped[k] |= {i, j}
+    return sorted(grouped.items())
 
 
 def get_neighbors(geoms: list[Geometry]) -> list[tuple[int, ...]]:
@@ -32,7 +31,7 @@ def get_neighbors(geoms: list[Geometry]) -> list[tuple[int, ...]]:
     return list(
         set(
             tuple(sorted(subgroup))
-            for root, other in grouped.items()
+            for root, other in grouped
             for subgroup in _powerset({root} | other)
         )
     )
