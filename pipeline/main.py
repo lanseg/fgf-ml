@@ -9,7 +9,7 @@ import numpy as np
 
 import features
 import tilesource
-import process
+import augment
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
@@ -51,9 +51,9 @@ if __name__ == "__main__":
         logger.info("using bounds %s", bound_values)
 
     baseTiles = tilesource.get_tiles(args.db_path, args.tile_size_km, bounds)
-    sliced = process.slice(baseTiles)
-    united = process.unite(sliced)
-    variants = list(process.variants(united))
+    sliced = augment.slice(baseTiles)
+    united = augment.unite(sliced)
+    variants = list(augment.variants(united))
 
     quantizer = faiss.IndexFlatL2(features.VECTOR_LENGTH)
     index = faiss.IndexIDMap(quantizer)
