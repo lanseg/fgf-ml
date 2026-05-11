@@ -1,15 +1,21 @@
 import argparse
+import json
 import logging
+from itertools import chain
 
 import faiss
 from matplotlib import patches
 from matplotlib.path import Path
 import shapely
 import numpy as np
+from multiprocessing import cpu_count
 
 import features
 import tilesource
 import augment
+
+
+nproc = cpu_count()
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
@@ -34,7 +40,7 @@ def drawGeoms(ax, geoms, style="g"):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate tile stream tiles from the database.")
     parser.add_argument("db_path", type=str, help="Path to the duckdb file with the tiles")
-    parser.add_argument("target", type=str, help="Target where to dump the search index")
+    parser.add_argument("index", type=str, help="Target where to dump the search index")
     parser.add_argument("--tile_size_km", type=float, help="Tile size in km (e.g., 10)")
     parser.add_argument(
         "--bounds",
@@ -51,17 +57,24 @@ if __name__ == "__main__":
         logger.info("using bounds %s", bound_values)
 
     baseTiles = tilesource.get_tiles(args.db_path, args.tile_size_km, bounds)
-    sliced = augment.slice(baseTiles)
-    united = augment.unite(sliced)
-    variants = list(augment.variants(united))
+    sliced = chain.from_iterable(map(augment.slice, baseTiles))
+    united = map(augment.unite_tile, sliced)
+    variants = chain.from_iterable(map(augment.variants, united))
 
     quantizer = faiss.IndexFlatL2(features.VECTOR_LENGTH)
     index = faiss.IndexIDMap(quantizer)
+    id_to_tile = []
 
     for i, tile in enumerate(variants):
-        logger.info("tile %d/%d/%d has %d objects", tile.x, tile.y, tile.zoom, len(tile.objects))
-        index.add_with_ids(np.array([features.vectorize(tile)]), np.array([i]))
+        logger.info(
+            "tile %d at %d/%d/%d has %d objects", i, tile.x, tile.y, tile.zoom, len(tile.objects)
+        )
+        v = features.vectorize([o.geom for o in tile.objects])
+        index.add_with_ids(np.array([v]), np.array([i]))
+        id_to_tile.append({"x": tile.x, "y": tile.y, "z": tile.zoom})
 
-    logger.info("saving index of %d vectors to %s", len(variants), args.target)
-    faiss.write_index(index, args.target)
+    logger.info("saving index of %d vectors to %s", index.ntotal, args.index)
+    faiss.write_index(index, args.index)
+    with open(f"{args.index}.metadata", "w") as index_metadata:
+        json.dump(id_to_tile, index_metadata)
     logger.info("done.")
