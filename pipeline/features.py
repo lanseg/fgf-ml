@@ -3,6 +3,7 @@ import cv2
 
 import shapely
 import transform
+import tilesource
 
 # Number of objects + 7 Hu moments
 VECTOR_LENGTH = 8
@@ -44,15 +45,16 @@ def _hu(geoms: list[shapely.Geometry], image_size=128):
     return hu_moments
 
 
-def vectorize(tile_geoms: list[shapely.Geometry]):
+def vectorize(tile: tilesource.Tile):
     polygons = [
-        geom
-        for geom in tile_geoms
-        if isinstance(geom, shapely.geometry.Polygon)
-        or isinstance(geom, shapely.geometry.MultiPolygon)
+        obj.geom
+        for obj in tile.objects
+        if isinstance(obj.geom, shapely.geometry.Polygon)
+        or isinstance(obj.geom, shapely.geometry.MultiPolygon)
     ]
     gc = shapely.geometry.GeometryCollection(polygons)
 
     # Normalizing
     gc = transform.fit(gc, (-1, -1, 1, 1))
-    return np.concatenate([[len(polygons)], _hu(gc.geoms)])
+    return ((tile.x, tile.y, tile.zoom, len(polygons)),
+            np.concatenate([[len(polygons)], _hu(gc.geoms)]))

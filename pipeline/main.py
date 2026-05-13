@@ -60,18 +60,16 @@ if __name__ == "__main__":
     sliced = chain.from_iterable(map(augment.slice, baseTiles))
     united = map(augment.unite_tile, sliced)
     variants = chain.from_iterable(map(augment.variants, united))
+    vectors = map(features.vectorize, variants)
 
     quantizer = faiss.IndexFlatL2(features.VECTOR_LENGTH)
     index = faiss.IndexIDMap(quantizer)
     id_to_tile = []
 
-    for i, tile in enumerate(variants):
-        logger.info(
-            "tile %d at %d/%d/%d has %d objects", i, tile.x, tile.y, tile.zoom, len(tile.objects)
-        )
-        v = features.vectorize([o.geom for o in tile.objects])
+    for i, ((x, y, z, n), v) in enumerate(vectors):
+        logger.info("tile %d at %d/%d/%d has %d objects", i, x, y, z, n)
         index.add_with_ids(np.array([v]), np.array([i]))
-        id_to_tile.append({"x": tile.x, "y": tile.y, "z": tile.zoom})
+        id_to_tile.append((x, y, z))
 
     logger.info("saving index of %d vectors to %s", index.ntotal, args.index)
     faiss.write_index(index, args.index)
