@@ -60,7 +60,7 @@ if __name__ == "__main__":
     sliced = chain.from_iterable(map(augment.slice, baseTiles))
     united = map(augment.unite_tile, sliced)
     variants = chain.from_iterable(map(augment.variants, united))
-    vectors = map(features.vectorize, variants)
+    vectors = map(features.vectorizeTile, variants)
 
     quantizer = faiss.IndexFlatL2(features.VECTOR_LENGTH)
     index = faiss.IndexIDMap(quantizer)

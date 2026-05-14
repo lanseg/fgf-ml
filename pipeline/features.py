@@ -44,17 +44,21 @@ def _hu(geoms: list[shapely.Geometry], image_size=128):
             hu_moments[i] = 0
     return hu_moments
 
+def vectorizeTile(tile: tilesource.Tile):
+    return (
+        (tile.x, tile.y, tile.zoom, len(tile.objects)),
+        vectorizeGeom([o.geom for o in tile.objects])
+    )
 
-def vectorize(tile: tilesource.Tile):
+def vectorizeGeom(geoms: list[shapely.Geometry]):
     polygons = [
-        obj.geom
-        for obj in tile.objects
-        if isinstance(obj.geom, shapely.geometry.Polygon)
-        or isinstance(obj.geom, shapely.geometry.MultiPolygon)
+        geom
+        for geom in geoms
+        if isinstance(geom, shapely.geometry.Polygon)
+        or isinstance(geom, shapely.geometry.MultiPolygon)
     ]
     gc = shapely.geometry.GeometryCollection(polygons)
 
     # Normalizing
     gc = transform.fit(gc, (-1, -1, 1, 1))
-    return ((tile.x, tile.y, tile.zoom, len(polygons)),
-            np.concatenate([[len(polygons)], _hu(gc.geoms)]))
+    return np.concatenate([[len(polygons)], _hu(gc.geoms)])

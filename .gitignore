@@ -4,4 +4,5 @@ deps
 .ruff_cache
 __pycache__
 .python_version
+indices
 tmp
