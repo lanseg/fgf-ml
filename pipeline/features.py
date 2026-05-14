@@ -44,11 +44,13 @@ def _hu(geoms: list[shapely.Geometry], image_size=128):
             hu_moments[i] = 0
     return hu_moments
 
+
 def vectorizeTile(tile: tilesource.Tile):
     return (
         (tile.x, tile.y, tile.zoom, len(tile.objects)),
-        vectorizeGeom([o.geom for o in tile.objects])
+        vectorizeGeom([o.geom for o in tile.objects]),
     )
+
 
 def vectorizeGeom(geoms: list[shapely.Geometry]):
     polygons = [

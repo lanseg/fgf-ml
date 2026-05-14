@@ -19,6 +19,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Find tiles similar geometries.")
     parser.add_argument("index", type=str, help="Path to the FAISS index file")
     parser.add_argument("geom", type=str, help="Geometry to find")
+    parser.add_argument("--top_k", type=int, help="Number of top matches to return", default=50)
     args = parser.parse_args()
 
     logger.info("loading vector index from %s", args.index)
@@ -36,7 +37,7 @@ if __name__ == "__main__":
     s = shape(json.loads(args.geom))
     v = features.vectorizeGeom([o for o in s.geoms])
 
-    k = 10
+    k = args.top_k
     distances, indices = index.search(np.array([v]), k)
 
     wkts = []
@@ -46,10 +47,6 @@ if __name__ == "__main__":
         meta = tuple(map(int, meta_str.split(" ")))
         wkts.append(geom.envelope_wkt(meta[0], meta[1], meta[2]))
         logger.info(
-            "Match %d: tile %d, score: %f, tile: (%d, %d, %d)",
-            i,
-            idx,
-            distances[0][i],
-            *meta
+            "Match %d: tile %d, score: %f, tile: (%d, %d, %d)", i, idx, distances[0][i], *meta
         )
-    print(f"GEOMETRYCOLLECTION({", ".join(wkts)})")
+    print(f"GEOMETRYCOLLECTION({', '.join(wkts)})")

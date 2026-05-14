@@ -61,23 +61,38 @@ python ./pipeline/tilesource.py \
 
 ## Building the vector index
 
-The main idea is to generate multiple versions of each tile: deformed and distorted in many different ways (because sketches are expected to be imprecise), with only portion of the geometries (because I can't expect an user to draw all buildings in the area), etc.
+```bash
+# Build an index for canton Zurich (approximately, includes neighbouring cantons too)
+python pipeline/main.py  \
+    --tile_size_km 1 \
+    --bounds 47.0394,8.2243,47.7394,9.0996 \
+    data/osm/switzerland-latest.duckdb \
+    ./indices/kanton_zurich.faiss
+```
 
-So, for each tile there are several hundred vectors that represent different variants of the tile.
+## Performing the search
+Geojson is used only for ease of testing, so I could select some buildings on a WKT editor and see
+if the finder will be able to find the tile.
 
-### Distortion and transformation
+```bash
+python pipeline/find.py \
+    ./indices/kanton_zurich.faiss \
+    "SOME_GEOJSON"
+```
 
-*TODO: Add note on making the polygons wobbly, shaky and somewhat similar to a man made drawing*
+You will get a list of candidate tiles and the GEOMETRYCOLLECTION with all of them in WKT format for
+debugging and validation.
 
-### Subset selection
+# Implementation details
 
-*TODO: Add numbers and the reason for the subset selection*
+The main idea is to generate augmented versions for each tile: deformed and distorted in many different ways (because sketches are expected to be imprecise), with only portion of the geometries (because I can't expect an user to draw all buildings in the area), etc.
 
-1. Build a Delaunnay triangulation from the building centroids, the centroids are vertices and the triangle edges are the graph edges.
-2. For each building/geometry take itself and the adjacent nodes.
-
-### Vectorizing the geometries
-
-1. Normalize the tile, scale it to fit into the square [-1, -1, 1, 1]. That's probably not needed at the current state, but any feature vector generation will be done for the normalized tile anyway.
-2. Calculating Hu moments: Rasterize the tile and calculate the image moments.
-3. Write those vectors with the tile id's into a faiss index.
+The whole process looks like this:
+1. Stream OSM data as square tiles with fixed side
+2. Slice each tile by object type: buildings, ways, etc.
+3. Augmentation (generate extra tiles, while preserving the original one):
+    1. Merge buildings that share the walls (unary_union)
+    1. Apply distortion: make tiles wobbly and more man-made looking
+    1. Generate various subsets of the tile
+4. Vectorize the tile (scale to [-1, -1, 1, 1] and calculate Hu moments)
+5. Save tile vector to the FAISS index and tile coordinates to a list
