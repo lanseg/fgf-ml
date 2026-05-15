@@ -8,7 +8,7 @@ from matplotlib import patches
 from matplotlib.path import Path
 import shapely
 import numpy as np
-from multiprocessing import cpu_count
+from multiprocessing import cpu_count, pool
 
 import features
 import tilesource
@@ -56,20 +56,22 @@ if __name__ == "__main__":
         bounds = (min(*lats), max(*lons), max(*lats), min(*lons))
         logger.info("using bounds %s", bound_values)
 
-    baseTiles = tilesource.get_tiles(args.db_path, args.tile_size_km, bounds)
-    sliced = chain.from_iterable(map(augment.slice, baseTiles))
-    united = map(augment.unite_tile, sliced)
-    variants = chain.from_iterable(map(augment.variants, united))
-    vectors = map(features.vectorizeTile, variants)
-
     quantizer = faiss.IndexFlatL2(features.VECTOR_LENGTH)
     index = faiss.IndexIDMap(quantizer)
-    id_to_tile = []
 
-    for i, ((x, y, z, n), v) in enumerate(vectors):
-        logger.info("tile %d at %d/%d/%d has %d objects", i, x, y, z, n)
-        index.add_with_ids(np.array([v]), np.array([i]))
-        id_to_tile.append((x, y, z))
+    id_to_tile = []
+    with pool.Pool(nproc) as p:
+        baseTiles = tilesource.get_tiles(args.db_path, args.tile_size_km, bounds)
+        sliced = p.imap_unordered(augment.slice, baseTiles)
+        united = p.imap_unordered(augment.unite_tile, chain.from_iterable(sliced))
+        variants = p.imap_unordered(augment.variants, united)
+        vectors = p.imap_unordered(features.vectorizeTile, chain.from_iterable(variants))
+
+        for i, ((x, y, z, n), v) in enumerate(vectors):
+            if i % 10000 == 0:
+                logger.info("tile %d at %d/%d/%d has %d objects", i, x, y, z, n)
+            index.add_with_ids(np.array([v]), np.array([i]))
+            id_to_tile.append((x, y, z))
 
     logger.info("saving index of %d vectors to %s", index.ntotal, args.index)
     faiss.write_index(index, args.index)

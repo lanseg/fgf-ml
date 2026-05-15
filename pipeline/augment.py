@@ -17,7 +17,8 @@ def slice(tile: tilesource.Tile) -> Iterable[tilesource.Tile]:
         if isinstance(t.geom, shapely.geometry.Polygon) and "building" in t.tags
     ]
     if objects:
-        yield tilesource.Tile(tile.x, tile.y, tile.zoom, objects)
+        return [tilesource.Tile(tile.x, tile.y, tile.zoom, objects)]
+    return []
 
 
 def unite_tile(tile: tilesource.Tile) -> tilesource.Tile:
@@ -42,7 +43,6 @@ def variants(tile: tilesource.Tile) -> Iterable[tilesource.Tile]:
         tilesource.OsmObject(tile.objects[i].id, tile.objects[i].tags, g)
         for i, g in enumerate(distort.distort_geoms([t.geom for t in tile.objects]))
     ]
-    yield tilesource.Tile(tile.x, tile.y, tile.zoom, objects=distorted)
     if len(tile.objects) > 500:
         logger.warning(
             "too many variants for tile at [%d/%d/%d]: %d",
@@ -51,5 +51,7 @@ def variants(tile: tilesource.Tile) -> Iterable[tilesource.Tile]:
             tile.zoom,
             len(tile.objects),
         )
-    for group in subsets.get_neighbors([o.geom for o in tile.objects]):
-        yield tilesource.Tile(tile.x, tile.y, tile.zoom, objects=[distorted[i] for i in group])
+    return [tilesource.Tile(tile.x, tile.y, tile.zoom, objects=distorted)] + [
+        tilesource.Tile(tile.x, tile.y, tile.zoom, objects=[distorted[i] for i in group])
+        for group in subsets.get_neighbors([o.geom for o in tile.objects])
+    ]
