@@ -36,6 +36,12 @@ def drawGeoms(ax, geoms, style="g"):
         elif isinstance(geom, shapely.geometry.Polygon):
             ax.fill(*geom.exterior.xy, style)
 
+def pipeline(src: tilesource.Tile) -> list[tuple[tuple[int, int, int, int], np.ndarray]]:
+    sliced = augment.slice(src)
+    united = map(augment.unite_tile, sliced)
+    variants = map(augment.variants, united)
+    vectors = list(map(features.vectorizeTile, chain.from_iterable(variants)))
+    return list(vectors)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate tile stream tiles from the database.")
@@ -62,14 +68,10 @@ if __name__ == "__main__":
     id_to_tile = []
     with pool.Pool(nproc) as p:
         baseTiles = tilesource.get_tiles(args.db_path, args.tile_size_km, bounds)
-        sliced = p.imap_unordered(augment.slice, baseTiles)
-        united = p.imap_unordered(augment.unite_tile, chain.from_iterable(sliced))
-        variants = p.imap_unordered(augment.variants, united)
-        vectors = p.imap_unordered(features.vectorizeTile, chain.from_iterable(variants))
+        vectors = p.imap_unordered(pipeline, baseTiles)
 
-        for i, ((x, y, z, n), v) in enumerate(vectors):
-            if i % 10000 == 0:
-                logger.info("tile %d at %d/%d/%d has %d objects", i, x, y, z, n)
+        for i, ((x, y, z, n), v) in enumerate(chain.from_iterable(vectors)):
+            logger.info("tile %d at %d/%d/%d has %d objects", i, x, y, z, n)
             index.add_with_ids(np.array([v]), np.array([i]))
             id_to_tile.append((x, y, z))
 
