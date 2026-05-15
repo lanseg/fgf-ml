@@ -94,5 +94,5 @@ The whole process looks like this:
     1. Merge buildings that share the walls (unary_union)
     1. Apply distortion: make tiles wobbly and more man-made looking
     1. Generate various subsets of the tile
-4. Vectorize the tile (scale to [-1, -1, 1, 1] and calculate Hu moments)
+4. Vectorize the tile (fit into [-1, -1, 1, 1] with fixed aspect ratio and calculate Hu moments)
 5. Save tile vector to the FAISS index and tile coordinates to a list
