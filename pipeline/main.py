@@ -78,5 +78,7 @@ if __name__ == "__main__":
     logger.info("saving index of %d vectors to %s", index.ntotal, args.index)
     faiss.write_index(index, args.index)
     with open(f"{args.index}.metadata", "w") as index_metadata:
-        json.dump(id_to_tile, index_metadata)
-    logger.info("done.")
+        for tile in id_to_tile:
+            index_metadata.write(f"{tile[0]} {tile[1]} {tile[2]}\n")
+    logger.info("done saving index of %d vectors to %s and metadata of %d records to %s",
+                index.ntotal, args.index, len(id_to_tile), f"{args.index}.metadata")

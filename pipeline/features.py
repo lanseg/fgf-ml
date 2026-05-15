@@ -62,5 +62,5 @@ def vectorizeGeom(geoms: list[shapely.Geometry]):
     gc = shapely.geometry.GeometryCollection(polygons)
 
     # Normalizing
-    gc = transform.fit(gc, (-1, -1, 1, 1))
+    gc = transform.fit(gc, (-1, -1, 1, 1), keep_aspect=True)
     return np.concatenate([[len(polygons)], _hu(gc.geoms)])

@@ -1,8 +1,9 @@
 import argparse
-import faiss
+import collections
 import json
 import logging
 
+import faiss
 import numpy as np
 from shapely.geometry import shape
 
@@ -40,13 +41,16 @@ if __name__ == "__main__":
     k = args.top_k
     distances, indices = index.search(np.array([v]), k)
 
-    wkts = []
+    result = collections.defaultdict(lambda: float('inf'))
     for i in range(k):
         idx = indices[0][i]
-        meta_str = index_metadata[idx]
-        meta = tuple(map(int, meta_str.split(" ")))
-        wkts.append(geom.envelope_wkt(meta[0], meta[1], meta[2]))
-        logger.info(
-            "Match %d: tile %d, score: %f, tile: (%d, %d, %d)", i, idx, distances[0][i], *meta
-        )
+        dist = distances[0][i]
+        tile = tuple(map(int, index_metadata[idx].split(" ")))
+        if result[tile] > dist:
+            result[tile] = dist
+    wkts = []
+
+    for i, (tile, dist) in enumerate(sorted(result.items(), key=lambda x: x[1])):
+        wkts.append(geom.envelope_wkt(*tile))
+        logger.info("Match %d: tile %d, score: %f, tile: (%d, %d, %d)", i, idx, dist, *tile)
     print(f"GEOMETRYCOLLECTION({', '.join(wkts)})")

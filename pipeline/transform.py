@@ -41,14 +41,17 @@ def apply(g: Geometry, tc: list[np.matrix]):
     return affine_transform(g, mtotr(m))
 
 
-def fit(g: Geometry, target: tuple[float, float, float, float]) -> Geometry:
+def fit(g: Geometry, target: tuple[float, float, float, float], keep_aspect: bool = False) -> Geometry:
     src = bounds(g)
+    kx = (target[2] - target[0]) / (src[2] - src[0])
+    ky = (target[3] - target[1]) / (src[3] - src[1])
+    if keep_aspect:
+        k = min(kx, ky)
+        kx = k
+        ky = k
     m = (
         translate(target[0], target[1])
-        * scale(
-            (target[2] - target[0]) / (src[2] - src[0]),
-            (target[3] - target[1]) / (src[3] - src[1]),
-        )
+        * scale(kx, ky)
         * translate(-src[0], -src[1])
     )
     return affine_transform(g, mtotr(m))
