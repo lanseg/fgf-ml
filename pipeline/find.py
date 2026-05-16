@@ -41,7 +41,7 @@ if __name__ == "__main__":
     k = args.top_k
     distances, indices = index.search(np.array([v]), k)
 
-    result = collections.defaultdict(lambda: float('inf'))
+    result = collections.defaultdict(lambda: float("inf"))
     for i in range(k):
         idx = indices[0][i]
         dist = distances[0][i]

@@ -53,6 +53,8 @@ def get_tiles(
     if bounds:
         x_min, x_max, y_min, y_max = geom.tiles_for_box(*bounds, zoom)
 
+    total_tiles = (x_max - x_min + 1) * (y_max - y_min + 1)
+    tile_count = 0
     for x in range(x_min, x_max + 1):
         for y in range(y_min, y_max + 1):
             envelope = geom.envelope_wkt(x, y, zoom)
@@ -67,7 +69,9 @@ def get_tiles(
                 for tuple in df.itertuples():
                     objects.append(OsmObject(id=tuple[1], geom=tuple[2], tags=dict(tuple[3])))
             logger.info(
-                "loaded tile %d[%d]/%d[%d]/%d with %d objects",
+                "loaded tile %d of %d: %d[%d]/%d[%d]/%d with %d objects",
+                tile_count,
+                total_tiles,
                 x,
                 x_max,
                 y,
@@ -75,5 +79,6 @@ def get_tiles(
                 zoom,
                 len(objects),
             )
+            tile_count += 1
             if objects:
                 yield Tile(x, y, zoom, objects)

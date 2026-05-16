@@ -1,6 +1,6 @@
 import argparse
-import json
 import logging
+import time
 from itertools import chain
 
 import faiss
@@ -36,12 +36,24 @@ def drawGeoms(ax, geoms, style="g"):
         elif isinstance(geom, shapely.geometry.Polygon):
             ax.fill(*geom.exterior.xy, style)
 
+
 def pipeline(src: tilesource.Tile) -> list[tuple[tuple[int, int, int, int], np.ndarray]]:
+    start = time.time()
     sliced = augment.slice(src)
     united = map(augment.unite_tile, sliced)
     variants = map(augment.variants, united)
     vectors = list(map(features.vectorizeTile, chain.from_iterable(variants)))
-    return list(vectors)
+    duration = time.time() - start
+    logger.info(
+        "processed tile (%d, %d, %d) with %d objects in %.2f seconds",
+        src.x,
+        src.y,
+        src.zoom,
+        len(src.objects),
+        duration,
+    )
+    return vectors
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate tile stream tiles from the database.")
@@ -65,20 +77,16 @@ if __name__ == "__main__":
     quantizer = faiss.IndexFlatL2(features.VECTOR_LENGTH)
     index = faiss.IndexIDMap(quantizer)
 
-    id_to_tile = []
+    index_metadata = open(f"{args.index}.metadata", "w")
     with pool.Pool(nproc) as p:
         baseTiles = tilesource.get_tiles(args.db_path, args.tile_size_km, bounds)
         vectors = p.imap_unordered(pipeline, baseTiles)
 
         for i, ((x, y, z, n), v) in enumerate(chain.from_iterable(vectors)):
-            logger.info("tile %d at %d/%d/%d has %d objects", i, x, y, z, n)
             index.add_with_ids(np.array([v]), np.array([i]))
-            id_to_tile.append((x, y, z))
+            index_metadata.write(f"{x} {y} {z}\n")
 
+    index_metadata.close()
     logger.info("saving index of %d vectors to %s", index.ntotal, args.index)
     faiss.write_index(index, args.index)
-    with open(f"{args.index}.metadata", "w") as index_metadata:
-        for tile in id_to_tile:
-            index_metadata.write(f"{tile[0]} {tile[1]} {tile[2]}\n")
-    logger.info("done saving index of %d vectors to %s and metadata of %d records to %s",
-                index.ntotal, args.index, len(id_to_tile), f"{args.index}.metadata")
+    logger.info("done saving index of %d vectors to %s", index.ntotal, args.index)
