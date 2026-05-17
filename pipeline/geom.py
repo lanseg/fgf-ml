@@ -22,10 +22,10 @@ def expand_bounding_box(lon_deg_w, lat_deg_s, lon_deg_e, lat_deg_n, X_km):
     lon_offset = (X_km / (R * math.cos(math.radians(lat_ref)))) * (180.0 / math.pi)
 
     return (
-        lat_deg_n + lat_offset,
+        lon_deg_w - lon_offset,
         lat_deg_s - lat_offset,
         lon_deg_e + lon_offset,
-        lon_deg_w - lon_offset,
+        lat_deg_n + lat_offset,
     )
 
 
@@ -39,7 +39,7 @@ def km_to_zoom(km: float) -> int:
     return max(0, round(zoom_float))
 
 
-def tile_to_wgs84(x: int, y: int, zoom: int) -> (int, int, int, int):
+def tile_to_wgs84(x: int, y: int, zoom: int, border_size_km: float = 0) -> (int, int, int, int):
     """
     Returns (west, south, east, north) in decimal degrees for the tile.
     """
@@ -53,6 +53,10 @@ def tile_to_wgs84(x: int, y: int, zoom: int) -> (int, int, int, int):
 
     lat_deg_n = merc_y_to_lat(y / n)
     lat_deg_s = merc_y_to_lat((y + 1) / n)
+    if border_size_km > 0:
+        lon_deg_w, lat_deg_s, lon_deg_e, lat_deg_n = expand_bounding_box(
+            lon_deg_w, lat_deg_s, lon_deg_e, lat_deg_n, border_size_km
+        )
     return lon_deg_w, lat_deg_s, lon_deg_e, lat_deg_n
 
 
@@ -93,9 +97,9 @@ def tiles_for_box(west, south, east, north, zoom):
     return x_min, x_max, y_min, y_max
 
 
-def envelope_wkt(x: int, y: int, zoom: int) -> str:
+def envelope_wkt(x: int, y: int, zoom: int, border_size_km: float = 0) -> str:
     """Return the tile envelope as a WKT POLYGON (used directly in DuckDB)."""
-    xmin, ymin, xmax, ymax = tile_to_wgs84(x, y, zoom)
+    xmin, ymin, xmax, ymax = tile_to_wgs84(x, y, zoom, border_size_km)
     return f"POLYGON(({xmin} {ymin}, {xmax} {ymin}, {xmax} {ymax}, {xmin} {ymax}, {xmin} {ymin}))"
 
 
