@@ -20,7 +20,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Find tiles similar geometries.")
     parser.add_argument("index", type=str, help="Path to the FAISS index file")
     parser.add_argument("geom", type=str, help="Geometry to find")
-    parser.add_argument("--top_k", type=int, help="Number of top matches to return", default=50)
+    parser.add_argument("--top_k", type=int, help="Number of top matches to return", default=10)
     args = parser.parse_args()
 
     logger.info("loading vector index from %s", args.index)

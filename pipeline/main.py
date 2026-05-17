@@ -61,6 +61,9 @@ if __name__ == "__main__":
     parser.add_argument("index", type=str, help="Target where to dump the search index")
     parser.add_argument("--tile_size_km", type=float, help="Tile size in km (e.g., 10)")
     parser.add_argument(
+        "--border_size_km", type=float, help="Border size in km (e.g., 1)", default=0
+    )
+    parser.add_argument(
         "--bounds",
         help="Region bounds as four comma-separated floats: lon,lat,lon,lat",
     )
@@ -79,7 +82,9 @@ if __name__ == "__main__":
 
     index_metadata = open(f"{args.index}.metadata", "w")
     with pool.Pool(nproc) as p:
-        baseTiles = tilesource.get_tiles(args.db_path, args.tile_size_km, bounds)
+        baseTiles = tilesource.get_tiles(
+            args.db_path, args.tile_size_km, args.border_size_km, bounds
+        )
         vectors = p.imap_unordered(pipeline, baseTiles)
 
         for i, ((x, y, z, n), v) in enumerate(chain.from_iterable(vectors)):

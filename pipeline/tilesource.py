@@ -35,6 +35,7 @@ class Tile:
 def get_tiles(
     db_path: str,
     tile_size_km: float,
+    border_size_km: float = 0,
     bounds: tuple[float, float, float, float] | None = None,
 ) -> Generator[Tile]:
     zoom = geom.km_to_zoom(tile_size_km)
@@ -55,9 +56,17 @@ def get_tiles(
 
     total_tiles = (x_max - x_min + 1) * (y_max - y_min + 1)
     tile_count = 0
+    dump = []
     for x in range(x_min, x_max + 1):
         for y in range(y_min, y_max + 1):
-            envelope = geom.envelope_wkt(x, y, zoom)
+            xmin, ymin, xmax, ymax = geom.tile_to_wgs84(x, y, zoom)
+            if border_size_km > 0:
+                xmin, ymin, xmax, ymax = geom.expand_bounding_box(
+                    xmin, ymin, xmax, ymax, border_size_km
+                )
+            envelope = f"POLYGON(({xmin} {ymin}, {xmax} {ymin}, {xmax} {ymax}, {xmin} {ymax}, {xmin} {ymin}))"
+
+            dump.append(envelope)
             sql = """SELECT feature_id, ST_AsWKB(geometry) AS geom, tags
                      FROM osm
                      WHERE ST_Intersects(geometry, ST_GeomFromText(?))"""
@@ -82,3 +91,4 @@ def get_tiles(
             tile_count += 1
             if objects:
                 yield Tile(x, y, zoom, objects)
+    print(f"GEOMETRYCOLLECTION({', '.join(dump)})")

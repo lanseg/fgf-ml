@@ -5,12 +5,28 @@ import shapely
 
 from shapely import strtree
 
+R = 6371.0
 ZOOM_1KM = 14
 WEB_MERCATOR_RADIUS = 6378137.0
 WEB_MERCATOR_MAX = WEB_MERCATOR_RADIUS * math.pi  # ≈ 20037508.342789244
 INITIAL_RESOLUTION = (
     2 * math.pi * WEB_MERCATOR_RADIUS / 256.0
 )  # ≈ 156543.033928041 (metres/pixel at zoom 0)
+
+
+def expand_bounding_box(lon_deg_w, lat_deg_s, lon_deg_e, lat_deg_n, X_km):
+    """Expands the bounding box by ~X kilometers in all directions"""
+
+    lat_offset = (X_km / R) * (180.0 / math.pi)
+    lat_ref = max(abs(lat_deg_s), abs(lat_deg_n))
+    lon_offset = (X_km / (R * math.cos(math.radians(lat_ref)))) * (180.0 / math.pi)
+
+    return (
+        lat_deg_n + lat_offset,
+        lat_deg_s - lat_offset,
+        lon_deg_e + lon_offset,
+        lon_deg_w - lon_offset,
+    )
 
 
 def km_to_zoom(km: float) -> int:
