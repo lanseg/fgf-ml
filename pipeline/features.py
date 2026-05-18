@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-
 import shapely
 import transform
 import tilesource

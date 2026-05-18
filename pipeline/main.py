@@ -1,9 +1,9 @@
 import argparse
 import logging
 import time
+import pathlib
 from itertools import chain
 
-import faiss
 from matplotlib import patches
 from matplotlib.path import Path
 import shapely
@@ -11,9 +11,11 @@ import numpy as np
 from multiprocessing import cpu_count, pool
 
 import features
+import storage
 import tilesource
 import augment
 
+BATCH_SIZE = 10000
 
 nproc = cpu_count()
 
@@ -77,10 +79,7 @@ if __name__ == "__main__":
         bounds = (min(*lats), max(*lons), max(*lats), min(*lons))
         logger.info("using bounds %s", bound_values)
 
-    quantizer = faiss.IndexFlatL2(features.VECTOR_LENGTH)
-    index = faiss.IndexIDMap(quantizer)
-
-    index_metadata = open(f"{args.index}.metadata", "w")
+    index = storage.Storage(pathlib.Path(args.index), features.VECTOR_LENGTH)
     with pool.Pool(nproc) as p:
         baseTiles = tilesource.get_tiles(
             args.db_path, args.tile_size_km, args.border_size_km, bounds
@@ -88,10 +87,6 @@ if __name__ == "__main__":
         vectors = p.imap_unordered(pipeline, baseTiles)
 
         for i, ((x, y, z, n), v) in enumerate(chain.from_iterable(vectors)):
-            index.add_with_ids(np.array([v]), np.array([i]))
-            index_metadata.write(f"{x} {y} {z}\n")
+            index.add(i, (x, y, z), v)
 
-    index_metadata.close()
-    logger.info("saving index of %d vectors to %s", index.ntotal, args.index)
-    faiss.write_index(index, args.index)
-    logger.info("done saving index of %d vectors to %s", index.ntotal, args.index)
+    index.flush()

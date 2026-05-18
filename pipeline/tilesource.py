@@ -57,7 +57,6 @@ def get_tiles(
 
     total_tiles = (x_max - x_min + 1) * (y_max - y_min + 1)
     tile_count = 0
-    dump = []
     for x in range(x_min, x_max + 1):
         for y in range(y_min, y_max + 1):
             envelope = geom.envelope_wkt(x, y, zoom, border_size_km)
