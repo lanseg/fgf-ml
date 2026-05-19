@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import numpy as np
 import cv2
 import shapely
@@ -6,6 +8,12 @@ import tilesource
 
 # Number of objects + 7 Hu moments
 VECTOR_LENGTH = 8
+
+
+@dataclass
+class FeatureVector:
+    tile: tuple[int, int, int, int]
+    vector: np.ndarray
 
 
 def _hu(geoms: list[shapely.Geometry], image_size=128):
@@ -44,10 +52,10 @@ def _hu(geoms: list[shapely.Geometry], image_size=128):
     return hu_moments
 
 
-def vectorizeTile(tile: tilesource.Tile):
-    return (
-        (tile.x, tile.y, tile.zoom, len(tile.objects)),
-        vectorizeGeom([o.geom for o in tile.objects]),
+def vectorizeTile(tile: tilesource.Tile) -> FeatureVector:
+    return FeatureVector(
+        tile=(tile.x, tile.y, tile.zoom, len(tile.objects)),
+        vector=vectorizeGeom([o.geom for o in tile.objects]),
     )
 
 

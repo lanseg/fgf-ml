@@ -3,11 +3,6 @@ import logging
 import time
 import pathlib
 from itertools import chain
-
-from matplotlib import patches
-from matplotlib.path import Path
-import shapely
-import numpy as np
 from multiprocessing import cpu_count, pool
 
 import features
@@ -17,29 +12,14 @@ import augment
 
 BATCH_SIZE = 10000
 
-nproc = cpu_count()
+nproc = cpu_count() - 2 if cpu_count() > 4 else 1
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
 )
 logger = logging.getLogger("main")
 
-
-def drawGeoms(ax, geoms, style="g"):
-    for geom in geoms:
-        if isinstance(geom, shapely.geometry.LineString):
-            codes = [Path.MOVETO]
-            for _ in geom.coords[1:]:
-                codes.append(Path.LINETO)
-            ax.add_patch(patches.PathPatch(Path(geom.coords, codes), facecolor="none", lw=2))
-        elif isinstance(geom, shapely.geometry.MultiPolygon):
-            for poly in geom.geoms:
-                ax.fill(*poly.exterior.xy, style)
-        elif isinstance(geom, shapely.geometry.Polygon):
-            ax.fill(*geom.exterior.xy, style)
-
-
-def pipeline(src: tilesource.Tile) -> list[tuple[tuple[int, int, int, int], np.ndarray]]:
+def pipeline(src: tilesource.Tile) -> list[features.FeatureVector]:
     start = time.time()
     sliced = augment.slice(src)
     united = map(augment.unite_tile, sliced)
@@ -47,12 +27,13 @@ def pipeline(src: tilesource.Tile) -> list[tuple[tuple[int, int, int, int], np.n
     vectors = list(map(features.vectorizeTile, chain.from_iterable(variants)))
     duration = time.time() - start
     logger.info(
-        "processed tile (%d, %d, %d) with %d objects in %.2f seconds",
+        "tile (%d, %d, %d) processed in %.2f seconds. Generated %d vectors from %d objects.",
         src.x,
         src.y,
         src.zoom,
-        len(src.objects),
         duration,
+        len(vectors),
+        len(src.objects),
     )
     return vectors
 
@@ -85,8 +66,7 @@ if __name__ == "__main__":
             args.db_path, args.tile_size_km, args.border_size_km, bounds
         )
         vectors = p.imap_unordered(pipeline, baseTiles)
-
-        for i, ((x, y, z, n), v) in enumerate(chain.from_iterable(vectors)):
-            index.add(i, (x, y, z), v)
+        for i, fv in enumerate(chain.from_iterable(vectors)):
+            index.add(i, fv)
 
     index.flush()

@@ -4,6 +4,8 @@ from pathlib import Path
 import numpy as np
 import faiss
 
+import features
+
 BATCH_SIZE = 100000
 
 logger = logging.getLogger("main")
@@ -26,6 +28,8 @@ class Storage:
         )
 
     def _save_batch(self):
+        assert self.index is not None
+
         index_batch_path, metadata_batch_path = self._get_batch_paths(self.batch_count)
         logger.info(
             "saving batch %d, index of %d (%d) vectors to %s",
@@ -53,16 +57,19 @@ class Storage:
         self.index = faiss.IndexIDMap(faiss.IndexFlatL2(self.vector_length))
         self.metadata = []
 
-    def add(self, id: int, metadata, vector):
+    def add(self, id: int, fv: features.FeatureVector):
         if not self.index:
             self._init_index()
-        self.index.add_with_ids(np.array([vector]), np.array([id]))
-        self.metadata.append(f"{metadata[0]} {metadata[1]} {metadata[2]}")
+        self.index.add_with_ids(np.array([fv.vector]), np.array([id]))
+        self.metadata.append(f"{fv.tile[0]} {fv.tile[1]} {fv.tile[2]}")
         self.vector_count += 1
         if self.vector_count >= BATCH_SIZE:
             self._init_index()
 
     def _merge(self):
+        if self.batch_count == 0:
+            logger.info("no batches to merge, skipping...")
+            return
         logger.info(f"Merging {self.batch_count + 1} index batches...")
         final_index = None
         final_metadata = []
@@ -75,6 +82,11 @@ class Storage:
                 final_index = batch_index
             else:
                 final_index.merge_from(batch_index, 0)
+        if final_index is None:
+            logger.warning(
+                "Failed to merge %d index batches: final index is None.", self.batch_count
+            )
+            return
         logger.info(
             "saving index of %d (%d) vectors to %s",
             final_index.ntotal,
