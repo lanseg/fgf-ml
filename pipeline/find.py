@@ -40,15 +40,17 @@ if __name__ == "__main__":
     v = features.vectorizeGeom([o for o in s.geoms])
 
     k = args.top_k
-    distances, indices = index.search(np.array([v]), k)
-
     result = collections.defaultdict(lambda: float("inf"))
-    for i in range(k):
-        idx = indices[0][i]
-        dist = distances[0][i]
-        tile = tuple(map(int, index_metadata[idx].split(" ")))
-        if result[tile] > dist:
-            result[tile] = dist
+
+    while len(result) < args.top_k and k < index.ntotal:
+        distances, indices = index.search(np.array([v]), k)
+        for i in range(k):
+            idx = indices[0][i]
+            dist = distances[0][i]
+            tile = tuple(map(int, index_metadata[idx].split(" ")))
+            if result[tile] > dist:
+                result[tile] = dist
+        k *= 2
     wkts = []
 
     for i, (tile, dist) in enumerate(sorted(result.items(), key=lambda x: x[1])):
