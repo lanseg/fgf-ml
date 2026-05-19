@@ -70,6 +70,8 @@ python pipeline/main.py  \
     ./indices/kanton_zurich.faiss
 ```
 
+There is a convenience script with some of the locations with their bounds: [get_index.sh](get_index.sh)
+
 ## Performing the search
 Geojson is used only for ease of testing, so I could select some buildings on a WKT editor and see
 if the finder will be able to find the tile.
