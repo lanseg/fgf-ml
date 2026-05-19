@@ -2,6 +2,7 @@ import argparse
 import collections
 import json
 import logging
+from pathlib import Path
 
 import faiss
 import numpy as np
@@ -30,7 +31,7 @@ if __name__ == "__main__":
     logger.info("loading index metadata from %s.metadata", args.index)
     index_metadata = []
     n = index.ntotal
-    with open(f"{args.index}.metadata", "rb") as f:
+    with Path(args.index).with_suffix('.metadata').open("rb") as f:
         data = f.read()
     index_metadata = data.decode("utf-8").split("\n")
     logger.info("Loaded index metadata for %d vectors.", len(index_metadata))
