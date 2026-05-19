@@ -1,14 +1,14 @@
 import argparse
 import logging
-import time
 import pathlib
+import time
 from itertools import chain
 from multiprocessing import cpu_count, pool
 
+import augment
 import features
 import storage
 import tilesource
-import augment
 
 BATCH_SIZE = 10000
 
@@ -18,6 +18,7 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
 )
 logger = logging.getLogger("main")
+
 
 def pipeline(src: tilesource.Tile) -> list[features.FeatureVector]:
     start = time.time()

@@ -1,9 +1,9 @@
-from collections.abc import Generator
-import numpy as np
-from shapely import bounds
-from shapely import Geometry, GeometryCollection
-from shapely.affinity import affine_transform
 from collections import namedtuple
+from collections.abc import Generator
+
+import numpy as np
+from shapely import Geometry, GeometryCollection, bounds
+from shapely.affinity import affine_transform
 
 TransformConfig = namedtuple("TransformConfig", ["dx", "dy", "a", "kx", "ky", "mx", "my"])
 

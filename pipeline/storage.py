@@ -1,8 +1,8 @@
 import logging
 from pathlib import Path
 
-import numpy as np
 import faiss
+import numpy as np
 
 import features
 
@@ -48,12 +48,12 @@ class Storage:
             len(self.metadata),
             index_batch_path,
         )
+        self.batch_count += 1
 
     def _init_index(self):
         if self.index is not None:
             self._save_batch()
             self.vector_count = 0
-            self.batch_count += 1
         self.index = faiss.IndexIDMap(faiss.IndexFlatL2(self.vector_length))
         self.metadata = []
 
@@ -70,10 +70,10 @@ class Storage:
         if self.batch_count == 0:
             logger.info("no batches to merge, skipping...")
             return
-        logger.info(f"Merging {self.batch_count + 1} index batches...")
+        logger.info(f"Merging {self.batch_count} index batches...")
         final_index = None
         final_metadata = []
-        for b in range(self.batch_count + 1):
+        for b in range(self.batch_count):
             index_batch_path, metadata_batch_path = self._get_batch_paths(b)
             batch_index = faiss.read_index(str(index_batch_path))
             with metadata_batch_path.open("r") as f:
@@ -105,7 +105,7 @@ class Storage:
 
     def _cleanup(self):
         logger.info("removing %s batch files...", self.batch_count)
-        for b in range(self.batch_count + 1):
+        for b in range(self.batch_count):
             index_batch_path, metadata_batch_path = self._get_batch_paths(b)
             index_batch_path.unlink()
             metadata_batch_path.unlink()

@@ -2,7 +2,6 @@ import math
 
 import osmium
 import shapely
-
 from shapely import strtree
 
 R = 6371.0

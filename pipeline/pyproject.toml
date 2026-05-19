@@ -27,3 +27,15 @@ line-length = 100
 
 [tool.ruff]
 line-length=100
+
+[tool.ruff.lint]
+select = ["I"]
+
+[tool.ruff.lint.isort]
+section-order = [
+    "future",
+    "standard-library", # System imports
+    "third-party",      # Dependencies
+    "first-party",      # Project imports
+    "local-folder",     # Relative project imports (e.g., from . import utils)
+]

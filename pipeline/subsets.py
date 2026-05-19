@@ -1,5 +1,6 @@
 import collections
-from itertools import combinations, chain
+from itertools import chain, combinations
+
 from scipy.spatial import Delaunay
 from shapely import Geometry, Point, centroid
 

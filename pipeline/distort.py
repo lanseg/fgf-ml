@@ -1,10 +1,10 @@
-import numpy as np
 from collections.abc import Generator, Iterable
-from shapely import Geometry
-from shapely.geometry import Polygon, LinearRing
 
-from scipy.ndimage import gaussian_filter1d
+import numpy as np
 from noise import pnoise1
+from scipy.ndimage import gaussian_filter1d
+from shapely import Geometry
+from shapely.geometry import LinearRing, Polygon
 
 
 def diagBBox(points):

@@ -1,10 +1,10 @@
+import logging
 from collections.abc import Generator
 from dataclasses import dataclass
-import logging
 
-from shapely import Geometry
-import geopandas as gpd
 import duckdb
+import geopandas as gpd
+from shapely import Geometry
 
 import geom
 

@@ -1,9 +1,10 @@
+import logging
 from collections.abc import Iterable
+
+import shapely
 
 import distort
 import geom
-import logging
-import shapely
 import subsets
 import tilesource
 

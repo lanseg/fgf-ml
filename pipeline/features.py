@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 
-import numpy as np
 import cv2
+import numpy as np
 import shapely
-import transform
+
 import tilesource
+import transform
 
 # Number of objects + 7 Hu moments
 VECTOR_LENGTH = 8
@@ -59,7 +60,7 @@ def vectorizeTile(tile: tilesource.Tile) -> FeatureVector:
     )
 
 
-def vectorizeGeom(geoms: list[shapely.Geometry]):
+def vectorizeGeom(geoms: list[shapely.Geometry]) -> np.ndarray:
     polygons = [
         geom
         for geom in geoms
