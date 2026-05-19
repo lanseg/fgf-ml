@@ -11,7 +11,9 @@ from billions to thousands (which is an acceptable amount for the Affine/Jaccard
 
 # Current status
 
-I implemented a feature vector generation and the indexing, now I'm going to try vectorizing the user input and searching for the candidates in the database.
+I implemented a feature vector generation, indexing and search, but search is not reliable yet, so
+I'm working on selecting good features and metrics and a way for a quicker and easy "hypothesis"
+validation.
 
 # Workflow
 
