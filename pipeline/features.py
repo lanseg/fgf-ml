@@ -6,20 +6,21 @@ import shapely
 import tilesource
 import transform
 
+
 @dataclass
 class FeatureVector:
     tile: tuple[int, int, int, int]
     vector: np.ndarray
 
 
-def toPointArray(geoms: shapely.geometry.GeometryCollection, sample_points=128):
-    if not isinstance(geoms, shapely.geometry.GeometryCollection):
-      geoms = shapely.geometry.GeometryCollection(geoms)
+def toPointArray(geoms: shapely.GeometryCollection, sample_points=128):
+    if not isinstance(geoms, shapely.GeometryCollection):
+      geoms = shapely.GeometryCollection(geoms)
     coords = []
     for geom in geoms.geoms:
         if geom.is_empty:
             continue
-        if isinstance(geom, shapely.geometry.Polygon):
+        if isinstance(geom, shapely.Polygon):
             coords.extend(geom.exterior.coords)
         boundary = geom.boundary
         for i in np.linspace(0, 1, sample_points, endpoint=True):
@@ -43,7 +44,7 @@ def areaToHull(obj: list[shapely.Geometry]):
 def norm(a):
   return (a - a.mean()) / (a.max() - a.min())
 
-def eccentricity(geoms: shapely.geometry.GeometryCollection) -> float:
+def eccentricity(geoms: shapely.GeometryCollection) -> float:
     coords = toPointArray(geoms)
     if len(coords) < 2:
         return 0.0
@@ -59,10 +60,10 @@ def vectorizeGeom(geoms: list[shapely.Geometry]) -> np.ndarray:
     polygons = [
         geom
         for geom in geoms
-        if isinstance(geom, shapely.geometry.Polygon)
-        or isinstance(geom, shapely.geometry.MultiPolygon)
+        if isinstance(geom, shapely.Polygon)
+        or isinstance(geom, shapely.MultiPolygon)
     ]
-    gc = shapely.geometry.GeometryCollection(polygons)
+    gc = shapely.GeometryCollection(polygons)
 
     methods = [
         lambda x: norm(radialDistanceHistogram(x, bins=10, sp=20)),
@@ -73,6 +74,7 @@ def vectorizeGeom(geoms: list[shapely.Geometry]) -> np.ndarray:
     result = []
     for m in methods:
         result.extend(m(obj))
+    assert len(result) == VECTOR_LENGTH, f"Expected length {VECTOR_LENGTH}, got {len(result)}"
     return np.array(result)
 
 def vectorizeTile(tile: tilesource.Tile) -> FeatureVector:

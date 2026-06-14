@@ -3,7 +3,7 @@ import logging
 import pathlib
 import time
 from itertools import chain
-from multiprocessing import cpu_count, pool
+from multiprocessing import Pool, cpu_count
 
 import augment
 import features
@@ -62,11 +62,12 @@ if __name__ == "__main__":
         logger.info("using bounds %s", bound_values)
 
     index = storage.Storage(pathlib.Path(args.index), features.VECTOR_LENGTH)
-    with pool.Pool(nproc) as p:
+    with Pool(nproc) as p:
         baseTiles = tilesource.get_tiles(
             args.db_path, args.tile_size_km, args.border_size_km, bounds
         )
-        vectors = p.imap_unordered(pipeline, baseTiles)
+        vectors = p.imap_unordered(
+            pipeline, filter(lambda x: x.objects, baseTiles))
         for i, fv in enumerate(chain.from_iterable(vectors)):
             index.add(i, fv)
 

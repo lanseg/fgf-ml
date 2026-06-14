@@ -1,5 +1,5 @@
 # ML-Tiles
-My experiment, "Finding place in the world by description or a freeform sketch".
+My prototype/experiment, "Finding place in the world by description or a freeform sketch".
 
 Computational geometry methods, like finding an affine transformation that gives best Jaccard metric
 for each tile are precise but slow - with some basic parallelization it takes several minutes to do

@@ -68,8 +68,8 @@ def get_tiles(
             for rbatch in batch:
                 df = rbatch.to_pandas()
                 df["geom"] = gpd.array.from_wkb(df["geom"], crs=PROJ)
-                for tuple in df.itertuples():
-                    objects.append(OsmObject(id=tuple[1], geom=tuple[2], tags=dict(tuple[3])))
+                for row in df.itertuples():
+                    objects.append(OsmObject(id=row[1], geom=row[2], tags=dict(row[3])))
             logger.info(
                 "loaded tile %d of %d: %d[%d]/%d[%d]/%d with %d objects",
                 tile_count,
@@ -82,5 +82,4 @@ def get_tiles(
                 len(objects),
             )
             tile_count += 1
-            if objects:
-                yield Tile(x, y, zoom, objects)
+            yield Tile(x, y, zoom, objects)

@@ -8,7 +8,7 @@ import features
 
 BATCH_SIZE = 100000
 
-logger = logging.getLogger("main")
+logger = logging.getLogger("storage")
 
 
 class Storage:
