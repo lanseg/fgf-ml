@@ -1,15 +1,10 @@
 from dataclasses import dataclass
 
-import cv2
 import numpy as np
 import shapely
 
 import tilesource
 import transform
-
-# Number of objects + 7 Hu moments
-VECTOR_LENGTH = 8
-
 
 @dataclass
 class FeatureVector:
@@ -17,48 +12,48 @@ class FeatureVector:
     vector: np.ndarray
 
 
-def _hu(geoms: list[shapely.Geometry], image_size=128):
-    """Calculate hu moments for the normalized ([-1, -1]) list of geometries."""
-
-    mask = np.zeros((image_size, image_size), dtype=np.uint8)
-
-    # Transform geometries from [-1, 1] to [0, image_size]
-    def transform_coords(x, y):
-        px = (x + 1) / 2 * (image_size - 1)
-        py = (y + 1) / 2 * (image_size - 1)
-        return int(px), int((image_size - 1) - py)
-
-    for geom in geoms:
-        if geom.is_empty or not hasattr(geom, "exterior"):
+def toPointArray(geoms: shapely.geometry.GeometryCollection, sample_points=128):
+    if not isinstance(geoms, shapely.geometry.GeometryCollection):
+      geoms = shapely.geometry.GeometryCollection(geoms)
+    coords = []
+    for geom in geoms.geoms:
+        if geom.is_empty:
             continue
+        if isinstance(geom, shapely.geometry.Polygon):
+            coords.extend(geom.exterior.coords)
+        boundary = geom.boundary
+        for i in np.linspace(0, 1, sample_points, endpoint=True):
+            pt = boundary.interpolate(i, normalized=True)
+            coords.append((pt.x, pt.y))
+    return np.array(coords)
 
-        coords = list(geom.exterior.coords)
-        pixel_coords = [transform_coords(x, y) for x, y in coords]
+def radialDistanceHistogram(obj: list[shapely.Geometry], bins = 10, sp=20):
+  pts = toPointArray(obj, sample_points=sp)
+  gc = shapely.GeometryCollection(obj).centroid
+  ctr = [gc.x, gc.y]
+  counts, bins = np.histogram(
+      [np.hypot(pt[0] - ctr[0], pt[1] - ctr[1]) for pt in pts],
+      bins)
+  return counts
 
-        pts = np.array(pixel_coords, np.int32)
-        cv2.fillPoly(mask, [pts], 255)
+def areaToHull(obj: list[shapely.Geometry]):
+  gc = shapely.GeometryCollection(obj)
+  return [gc.area / gc.convex_hull.area if gc.convex_hull.area > 0 else 0]
 
-        for interior in geom.interiors:
-            hole_coords = [transform_coords(x, y) for x, y in interior.coords]
-            hole_pts = np.array(hole_coords, np.int32)
-            cv2.fillPoly(mask, [hole_pts], 0)
+def norm(a):
+  return (a - a.mean()) / (a.max() - a.min())
 
-    hu_moments = cv2.HuMoments(cv2.moments(mask)).flatten()
+def eccentricity(geoms: shapely.geometry.GeometryCollection) -> float:
+    coords = toPointArray(geoms)
+    if len(coords) < 2:
+        return 0.0
+    cov = np.cov(coords, rowvar=False)
+    eigenvalues, _ = np.linalg.eig(cov)
+    if np.any(eigenvalues <= 0):
+        return 0.0
+    return np.sqrt(1 - min(eigenvalues) / max(eigenvalues))
 
-    for i in range(0, 7):
-        if hu_moments[i] != 0:
-            hu_moments[i] = -1 * np.sign(hu_moments[i]) * np.log10(np.abs(hu_moments[i]))
-        else:
-            hu_moments[i] = 0
-    return hu_moments
-
-
-def vectorizeTile(tile: tilesource.Tile) -> FeatureVector:
-    return FeatureVector(
-        tile=(tile.x, tile.y, tile.zoom, len(tile.objects)),
-        vector=vectorizeGeom([o.geom for o in tile.objects]),
-    )
-
+VECTOR_LENGTH = 11
 
 def vectorizeGeom(geoms: list[shapely.Geometry]) -> np.ndarray:
     polygons = [
@@ -69,6 +64,19 @@ def vectorizeGeom(geoms: list[shapely.Geometry]) -> np.ndarray:
     ]
     gc = shapely.geometry.GeometryCollection(polygons)
 
-    # Normalizing
-    gc = transform.fit(gc, (-1, -1, 1, 1), keep_aspect=True)
-    return np.concatenate([[len(polygons)], _hu(gc.geoms)])
+    methods = [
+        lambda x: norm(radialDistanceHistogram(x, bins=10, sp=20)),
+        lambda x: [areaToHull(x)[0] - 0.5]
+    ]
+
+    obj = transform.fit(gc, (-1, -1, 1, 1), keep_aspect=True)
+    result = []
+    for m in methods:
+        result.extend(m(obj))
+    return np.array(result)
+
+def vectorizeTile(tile: tilesource.Tile) -> FeatureVector:
+    return FeatureVector(
+        tile=(tile.x, tile.y, tile.zoom, len(tile.objects)),
+        vector=vectorizeGeom([o.geom for o in tile.objects]),
+    )
