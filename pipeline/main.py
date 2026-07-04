@@ -10,7 +10,7 @@ import features
 import storage
 import tilesource
 
-BATCH_SIZE = 10000
+BATCH_SIZE = 1000
 
 nproc = cpu_count() - 2 if cpu_count() > 4 else 1
 

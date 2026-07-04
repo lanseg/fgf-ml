@@ -24,4 +24,4 @@ python pipeline/main.py  \
     --border_size_km 0.2 \
     --bounds $bounds \
     data/osm/switzerland-latest.duckdb \
-    ./indices/$requested_area.faiss 2>&1 | tee "indices/$requested_area.log"
+    ./indices/$requested_area/$requested_area.faiss 2>&1 | tee "indices/$requested_area/$requested_area.log"

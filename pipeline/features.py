@@ -32,17 +32,18 @@ def radialDistanceHistogram(obj: list[shapely.Geometry], bins = 10, sp=20):
   pts = toPointArray(obj, sample_points=sp)
   gc = shapely.GeometryCollection(obj).centroid
   ctr = [gc.x, gc.y]
-  counts, bins = np.histogram(
+  counts, _ = np.histogram(
       [np.hypot(pt[0] - ctr[0], pt[1] - ctr[1]) for pt in pts],
       bins)
-  return counts
+  return [cnt / len(pts) / np.sqrt(bins) for cnt in counts]
 
 def areaToHull(obj: list[shapely.Geometry]):
   gc = shapely.GeometryCollection(obj)
   return [gc.area / gc.convex_hull.area if gc.convex_hull.area > 0 else 0]
 
-def norm(a):
-  return (a - a.mean()) / (a.max() - a.min())
+def compactness(obj: list[shapely.Geometry]):
+  gc = shapely.GeometryCollection(obj)
+  return 4 * np.pi * gc.area / (gc.length ** 2)
 
 def eccentricity(geoms: shapely.GeometryCollection) -> float:
     coords = toPointArray(geoms)
@@ -54,7 +55,7 @@ def eccentricity(geoms: shapely.GeometryCollection) -> float:
         return 0.0
     return np.sqrt(1 - min(eigenvalues) / max(eigenvalues))
 
-VECTOR_LENGTH = 11
+VECTOR_LENGTH = 13
 
 def vectorizeGeom(geoms: list[shapely.Geometry]) -> np.ndarray:
     polygons = [
@@ -66,8 +67,10 @@ def vectorizeGeom(geoms: list[shapely.Geometry]) -> np.ndarray:
     gc = shapely.GeometryCollection(polygons)
 
     methods = [
-        lambda x: norm(radialDistanceHistogram(x, bins=10, sp=20)),
-        lambda x: [areaToHull(x)[0] - 0.5]
+        lambda x: [len(polygons)],
+        lambda x: [areaToHull(x)[0]],
+        lambda x: [compactness(x)],
+        lambda x: radialDistanceHistogram(x)
     ]
 
     obj = transform.fit(gc, (-1, -1, 1, 1), keep_aspect=True)

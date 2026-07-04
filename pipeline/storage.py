@@ -12,19 +12,20 @@ logger = logging.getLogger("storage")
 
 
 class Storage:
-    def __init__(self, index_file: Path, vector_length: int):
+    def __init__(self, index_file: Path, vector_length: int, batch_size=BATCH_SIZE):
         self.index_file = index_file
-        self.index_metadata_file = self.index_file.with_suffix(".metadata")
         self.vector_length = vector_length
         self.vector_count = 0
         self.batch_count = 0
+        self.batch_size = batch_size
         self.index = None
         self.metadata = []
 
     def _get_batch_paths(self, batch: int):
+        stem = self.index_file.stem
         return (
-            self.index_file.with_suffix(f".faiss_{batch}"),
-            self.index_metadata_file.with_suffix(f".metadata_{batch}"),
+            self.index_file.with_stem(f"{stem}_{batch}"),
+            self.index_file.with_stem(f"{stem}_{batch}").with_suffix(".metadata"),
         )
 
     def _save_batch(self):
@@ -38,6 +39,7 @@ class Storage:
             len(self.metadata),
             index_batch_path,
         )
+        metadata_batch_path.parent.mkdir(parents=True, exist_ok=True)
         faiss.write_index(self.index, str(index_batch_path))
         with metadata_batch_path.open("w") as f:
             f.write("\n".join(self.metadata))
@@ -61,57 +63,11 @@ class Storage:
         if not self.index:
             self._init_index()
         self.index.add_with_ids(np.array([fv.vector]), np.array([id]))
-        self.metadata.append(f"{fv.tile[0]} {fv.tile[1]} {fv.tile[2]}")
+        self.metadata.append(f"{id} {fv.tile[0]} {fv.tile[1]} {fv.tile[2]}")
         self.vector_count += 1
-        if self.vector_count >= BATCH_SIZE:
+        if self.vector_count >= self.batch_size:
             self._init_index()
 
-    def _merge(self):
-        if self.batch_count == 0:
-            logger.info("no batches to merge, skipping...")
-            return
-        logger.info(f"Merging {self.batch_count} index batches...")
-        final_index = None
-        final_metadata = []
-        for b in range(self.batch_count):
-            index_batch_path, metadata_batch_path = self._get_batch_paths(b)
-            batch_index = faiss.read_index(str(index_batch_path))
-            with metadata_batch_path.open("r") as f:
-                final_metadata.extend(f.read().splitlines())
-            if final_index is None:
-                final_index = batch_index
-            else:
-                final_index.merge_from(batch_index, 0)
-        if final_index is None:
-            logger.warning(
-                "Failed to merge %d index batches: final index is None.", self.batch_count
-            )
-            return
-        logger.info(
-            "saving index of %d (%d) vectors to %s",
-            final_index.ntotal,
-            len(final_metadata),
-            self.index_file,
-        )
-        faiss.write_index(final_index, str(self.index_file))
-        with self.index_metadata_file.open("w") as f:
-            f.write("\n".join(final_metadata))
-        logger.info(
-            "saving index of %d (%d) vectors to %s",
-            final_index.ntotal,
-            len(final_metadata),
-            self.index_file,
-        )
-
-    def _cleanup(self):
-        logger.info("removing %s batch files...", self.batch_count)
-        for b in range(self.batch_count):
-            index_batch_path, metadata_batch_path = self._get_batch_paths(b)
-            index_batch_path.unlink()
-            metadata_batch_path.unlink()
-        logger.info("done removing %s batch files...", self.batch_count)
-
     def flush(self):
+        logger.info("saving the last batch")
         self._save_batch()
-        self._merge()
-        self._cleanup()
