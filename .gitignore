@@ -1,5 +1,6 @@
 data
 deps
+.vscode
 .venv
 .ruff_cache
 __pycache__

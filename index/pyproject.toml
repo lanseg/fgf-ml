@@ -1,0 +1,48 @@
+[project]
+name = "osm-index"
+version = "0.1.0"
+description = "OSM data indexing and visual search"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "datashader>=0.18.2",
+    "duckdb>=1.4.3",
+    "faiss-cpu>=1.13.2",
+    "geopandas>=1.1.2",
+    "holoviews>=1.22.1",
+    "matplotlib>=3.10.8",
+    "noise>=1.2.2",
+    "numpy>=2.4.0",
+    "opencv-python>=4.13.0.92",
+    "osmium>=4.2.0",
+    "pandas>=2.3.3",
+    "pyarrow>=22.0.0",
+    "pyproj>=3.7.2",
+    "scikit-image>=0.26.0",
+    "scipy>=1.17.0",
+    "shapely>=2.1.2",
+]
+
+[tool.black]
+line-length = 100
+
+[tool.ruff]
+line-length=100
+
+[tool.ruff.lint]
+select = ["I"]
+
+[tool.ruff.lint.isort]
+section-order = [
+    "future",
+    "standard-library", # System imports
+    "third-party",      # Dependencies
+    "first-party",      # Project imports
+    "local-folder",     # Relative project imports (e.g., from . import utils)
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.15.20",
+]
