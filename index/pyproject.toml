@@ -18,9 +18,12 @@ dependencies = [
     "pandas>=2.3.3",
     "pyarrow>=22.0.0",
     "pyproj>=3.7.2",
+    "rasterio>=1.5.0",
     "scikit-image>=0.26.0",
     "scipy>=1.17.0",
     "shapely>=2.1.2",
+    "torch>=2.12.1",
+    "torchvision>=0.27.1",
 ]
 
 [tool.black]

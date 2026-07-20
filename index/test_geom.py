@@ -1,6 +1,6 @@
-import pytest
 import random
 
+import pytest
 import shapely
 
 import geom
@@ -29,7 +29,8 @@ _boxes = [
 
 # Lon Lat
 _zurich_hb = (8.53976, 47.37795)
-_switzerland = (5.4467010850356266,47.73248844856869,11.4152400783939,45.864502976445976)
+_switzerland = (5.4467010850356266, 47.73248844856869, 11.4152400783939, 45.864502976445976)
+
 
 def test_expand_bounding_box():
     deltas = []
@@ -56,18 +57,21 @@ def test_coord_tile():
         assert geom.coord_to_tile(rand_lon, rand_lat, zoom) == tile
 
 
-@pytest.mark.parametrize("tile_size,border_size_km,bounds", [
-    (10, 0, _switzerland),
-    (100, 0, _switzerland),
-    (3000, 0, _switzerland),
-    (10, 5, _switzerland),
-    (100, 5, _switzerland),
-    (3000, 5, _switzerland),    
-])
+@pytest.mark.parametrize(
+    "tile_size,border_size_km,bounds",
+    [
+        (10, 0, _switzerland),
+        (100, 0, _switzerland),
+        (3000, 0, _switzerland),
+        (10, 5, _switzerland),
+        (100, 5, _switzerland),
+        (3000, 5, _switzerland),
+    ],
+)
 def test_grid_fill(tile_size, border_size_km, bounds):
     bound_box = shapely.box(*bounds)
     count, it = geom.grid_fill(tile_size, border_size_km, bounds)
     coverage = []
-    for (x, y, zoom) in it:
+    for x, y, zoom in it:
         coverage.append(shapely.box(*geom.tile_to_coord(x, y, zoom)))
     assert bound_box.area == shapely.unary_union(coverage).intersection(bound_box).area

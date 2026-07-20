@@ -5,12 +5,28 @@ import time
 from itertools import chain
 from multiprocessing import Pool, cpu_count
 
+import shapely
+
+import raster
 import tilesource
+import transform
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
 )
 logger = logging.getLogger("main")
+
+
+def slice(tile: tilesource.Tile) -> Iterable[tilesource.Tile]:
+    objects = [
+        t
+        for t in tile.objects
+        if isinstance(t.geom, shapely.geometry.Polygon) and "building" in t.tags
+    ]
+    if objects:
+        return [tilesource.Tile(tile.x, tile.y, tile.zoom, objects)]
+    return []
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate tile stream tiles from the database.")
@@ -33,6 +49,10 @@ if __name__ == "__main__":
         bounds = (min(*lons), max(*lats), max(*lons), min(*lats))
         logger.info("using bounds %s", bound_values)
 
+    img_size = 512
     baseTiles = tilesource.from_db(args.db_path, args.tile_size_km, args.border_size_km, bounds)
-    for tile in baseTiles:
-        pass
+    for tile in chain.from_iterable(map(slice, baseTiles)):
+        slice
+        geoms = shapely.GeometryCollection([o.geom for o in tile.objects])
+        obj = transform.fit(geoms, (0, 0, img_size, img_size), keep_aspect=True)
+        raster.rasterize_geometry(obj.geoms, img_size)

@@ -52,7 +52,7 @@ def from_db(
     conn = duckdb.connect(database=db_path, read_only=True)
     conn.execute("INSTALL spatial; LOAD spatial;")
     for i, tile in enumerate(tile_stream):
-        x, y = tile
+        x, y, zoom = tile
         envelope = geom.envelope_wkt(x, y, zoom, border_size_km)
         sql = """SELECT feature_id, ST_AsWKB(geometry) AS geom, tags
                     FROM osm
