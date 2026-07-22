@@ -5,7 +5,8 @@ import shapely
 
 import tilesource
 import transform
-
+import clip
+import raster
 
 @dataclass
 class FeatureVector:
@@ -80,7 +81,13 @@ def vectorizeGeom(geoms: list[shapely.Geometry]) -> np.ndarray:
     assert len(result) == VECTOR_LENGTH, f"Expected length {VECTOR_LENGTH}, got {len(result)}"
     return np.array(result)
 
+indexer = clip.CLIPGeospatialIndexer()
+
 def vectorizeTile(tile: tilesource.Tile) -> FeatureVector:
+    geoms = shapely.GeometryCollection([o.geom for o in tile.objects])
+    obj = transform.fit(geoms, (0, 0, img_size, img_size), keep_aspect=True)
+    img = raster.rasterize_geometry(obj.geoms, img_size)
+    emb = indexer.generate_embedding(img)    
     return FeatureVector(
         tile=(tile.x, tile.y, tile.zoom, len(tile.objects)),
         vector=vectorizeGeom([o.geom for o in tile.objects]),

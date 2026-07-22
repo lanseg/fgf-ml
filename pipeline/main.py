@@ -9,6 +9,8 @@ import augment
 import features
 import storage
 import tilesource
+import clip
+import raster
 
 BATCH_SIZE = 1000
 
@@ -23,9 +25,7 @@ logger = logging.getLogger("main")
 def pipeline(src: tilesource.Tile) -> list[features.FeatureVector]:
     start = time.time()
     sliced = augment.slice(src)
-    united = map(augment.unite_tile, sliced)
-    variants = map(augment.variants, united)
-    vectors = list(map(features.vectorizeTile, chain.from_iterable(variants)))
+    vectors = list(map(features.vectorizeTile, chain.from_iterable(sliced)))
     duration = time.time() - start
     logger.info(
         "tile (%d, %d, %d) processed in %.2f seconds. Generated %d vectors from %d objects.",

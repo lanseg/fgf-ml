@@ -5,15 +5,6 @@ import shapely
 
 import geom
 
-# def km_to_zoom(km: float) -> int:
-# def tile_to_wgs84(x: int, y: int, zoom: int, border_size_km: float = 0) -> (int, int, int, int):
-#     def merc_y_to_lat(y_frac):
-# def wgs84_to_tile(lon: float, lat: float, zoom: int = ZOOM_1KM) -> (int, int):
-# def get_tile_bounds(items: list[osmium.osm.Location], zoom: int):
-# def tiles_for_box(west, south, east, north, zoom):
-# def envelope_wkt(x: int, y: int, zoom: int, border_size_km: float = 0) -> str:
-# def mapping_union(geoms: list[shapely.Geometry]) -> list[tuple[shapely.Geometry, list[int]]]:
-
 _boxes = [
     # Prime  | Equator
     (8.535862, 47.378912, 8.544016, 47.382457),  # Before | Above
