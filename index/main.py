@@ -7,9 +7,7 @@ from multiprocessing import Pool, cpu_count
 from pathlib import Path
 
 import shapely
-import clip
-import raster
-import storage
+
 import tilesource
 import transform
 
@@ -51,14 +49,7 @@ if __name__ == "__main__":
         bounds = (min(*lons), max(*lats), max(*lons), min(*lats))
         logger.info("using bounds %s", bound_values)
 
-    indexer = clip.CLIPGeospatialIndexer()
-    img_size = 512
     baseTiles = tilesource.from_db(args.db_path, args.tile_size_km, args.border_size_km, bounds)
-    stg = storage.Storage(Path("indices/zurich.faiss"), 512)
     for i, tile in enumerate(chain.from_iterable(map(slice, baseTiles))):
         geoms = shapely.GeometryCollection([o.geom for o in tile.objects])
-        obj = transform.fit(geoms, (0, 0, img_size, img_size), keep_aspect=True)
-        img = raster.rasterize_geometry(obj.geoms, img_size)
-        emb = indexer.generate_embedding(img)
-        stg.add(i, (tile.x, tile.y, tile.zoom), emb)
-    stg.flush()
+        obj = transform.fit(geoms, (0, 0, 1, 1), keep_aspect=True)
