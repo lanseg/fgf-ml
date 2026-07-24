@@ -1,9 +1,11 @@
 import logging
-from collections.abc import Generator
+import collections
+from collections.abc import Generator, Callable, Hashable
 from dataclasses import dataclass
 
 import duckdb
 import geopandas as gpd
+import shapely
 from shapely import Geometry
 
 import geom
@@ -30,6 +32,12 @@ class Tile:
     y: int
     zoom: int
     objects: list[OsmObject]
+
+def slice(tile: Tile, key: Callable[[OsmObject], Hashable]) -> Iterable[Tile]:
+    grouped = collections.defaultdict(list)
+    for obj in tile.objects:
+        grouped[key(obj)].append(obj)
+    return [Tile(tile.x, tile.y, tile.zoom, objects) for objects in grouped.values()]
 
 
 def from_db(

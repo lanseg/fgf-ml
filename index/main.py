@@ -16,17 +16,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("main")
 
-
-def slice(tile: tilesource.Tile) -> Iterable[tilesource.Tile]:
-    objects = [
-        t
-        for t in tile.objects
-        if isinstance(t.geom, shapely.geometry.Polygon) and "building" in t.tags
-    ]
-    if objects:
-        return [tilesource.Tile(tile.x, tile.y, tile.zoom, objects)]
-    return []
-
+def slicer(tile: tilesource.Tile) -> Iterable[Tile]:
+    key = lambda obj: "building" if isinstance(obj.geom, shapely.Polygon) and "building" in obj.tags else None
+    return tilesource.slice(tile, key)
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate tile stream tiles from the database.")
@@ -50,6 +43,9 @@ if __name__ == "__main__":
         logger.info("using bounds %s", bound_values)
 
     baseTiles = tilesource.from_db(args.db_path, args.tile_size_km, args.border_size_km, bounds)
-    for i, tile in enumerate(chain.from_iterable(map(slice, baseTiles))):
+    sliced = chain.from_iterable(map(slicer, baseTiles))
+    buildings = filter(lambda tile: "building" in tile.objects[0].tags, sliced)
+
+    for i, tile in enumerate(buildings):
         geoms = shapely.GeometryCollection([o.geom for o in tile.objects])
         obj = transform.fit(geoms, (0, 0, 1, 1), keep_aspect=True)
