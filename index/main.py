@@ -9,6 +9,7 @@ from pathlib import Path
 import shapely
 
 import augment
+import clip
 import tilesource
 import transform
 
@@ -16,6 +17,8 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
 )
 logger = logging.getLogger("main")
+
+img_size = 224
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate tile stream tiles from the database.")
@@ -44,6 +47,9 @@ if __name__ == "__main__":
     united = map(augment.unite_tile, buildings)
     variants = chain.from_iterable(map(augment.variants, united))
 
+    generator = clip.CLIPEmbeddingGenerator()
     for i, tile in enumerate(variants):
         geoms = shapely.GeometryCollection([o.geom for o in tile.objects])
-        obj = transform.fit(geoms, (0, 0, 1, 1), keep_aspect=True)
+        obj = transform.fit(geoms, (0, 0, img_size, img_size), keep_aspect=True)
+        img = generator.rasterize_geometry(obj.geoms, img_size)
+        emb = generator.generate_embedding(img)
