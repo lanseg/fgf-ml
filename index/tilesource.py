@@ -1,6 +1,6 @@
-import logging
 import collections
-from collections.abc import Generator, Callable, Hashable
+import logging
+from collections.abc import Callable, Generator, Hashable
 from dataclasses import dataclass
 
 import duckdb
@@ -33,12 +33,19 @@ class Tile:
     zoom: int
     objects: list[OsmObject]
 
-def slice(tile: Tile, key: Callable[[OsmObject], Hashable]) -> Iterable[Tile]:
+def _object_type_slicer(obj: OsmObject) -> str|None:
+    if isinstance(obj.geom, shapely.Polygon) and "building" in obj.tags:
+        return "building"
+    return None
+
+def slice(tile: Tile, key: Callable[[OsmObject], Hashable]) -> list[Tile]:
     grouped = collections.defaultdict(list)
     for obj in tile.objects:
         grouped[key(obj)].append(obj)
     return [Tile(tile.x, tile.y, tile.zoom, objects) for objects in grouped.values()]
 
+def slice_by_type(tile: Tile) -> list[Tile]:
+    return slice(tile, _object_type_slicer)
 
 def from_db(
     db_path: str,
@@ -73,12 +80,13 @@ def from_db(
             for row in df.itertuples():
                 objects.append(OsmObject(id=row[1], geom=row[2], tags=dict(row[3])))
         logger.info(
-            "loaded tile %d of %d: %d/%d/%d with %d objects",
+            "loaded tile %d of %d: %d/%d/%d with %d objects: %s",
             i,
             total_tiles,
             x,
             y,
             zoom,
             len(objects),
+            envelope
         )
         yield Tile(x, y, zoom, objects)

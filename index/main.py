@@ -8,6 +8,7 @@ from pathlib import Path
 
 import shapely
 
+import augment
 import tilesource
 import transform
 
@@ -15,11 +16,6 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
 )
 logger = logging.getLogger("main")
-
-def slicer(tile: tilesource.Tile) -> Iterable[Tile]:
-    key = lambda obj: "building" if isinstance(obj.geom, shapely.Polygon) and "building" in obj.tags else None
-    return tilesource.slice(tile, key)
-    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate tile stream tiles from the database.")
@@ -43,9 +39,11 @@ if __name__ == "__main__":
         logger.info("using bounds %s", bound_values)
 
     baseTiles = tilesource.from_db(args.db_path, args.tile_size_km, args.border_size_km, bounds)
-    sliced = chain.from_iterable(map(slicer, baseTiles))
+    sliced = chain.from_iterable(map(tilesource.slice_by_type, baseTiles))
     buildings = filter(lambda tile: "building" in tile.objects[0].tags, sliced)
+    united = map(augment.unite_tile, buildings)
+    variants = chain.from_iterable(map(augment.variants, united))
 
-    for i, tile in enumerate(buildings):
+    for i, tile in enumerate(variants):
         geoms = shapely.GeometryCollection([o.geom for o in tile.objects])
         obj = transform.fit(geoms, (0, 0, 1, 1), keep_aspect=True)
