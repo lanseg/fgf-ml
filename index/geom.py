@@ -16,7 +16,7 @@ WEB_MERCATOR_MAX = WEB_MERCATOR_RADIUS * math.pi  # ≈ 20037508.342789244
 INITIAL_RESOLUTION = 2 * math.pi * WEB_MERCATOR_RADIUS / 256.0  # ≈ 156543 (metres/pixel at zoom 0)
 
 
-def expand_bounding_box(lat1, lon1, lat2, lon2, add_m):
+def expand_bounding_box(lon1, lat1, lon2, lat2, add_m):
     """Expand using local UTM projection for best accuracy"""
     box = shapely.box(min(lon1, lon2), min(lat1, lat2), max(lon1, lon2), max(lat1, lat2))
     center = box.centroid
@@ -100,8 +100,8 @@ def tiles_for_box(west, south, east, north, zoom):
 
 def envelope_wkt(x: int, y: int, zoom: int, border_size_km: float = 0) -> str:
     """Return the tile envelope as a WKT POLYGON (used directly in DuckDB)."""
-    xmin, ymin, xmax, ymax = tile_to_coord(x, y, zoom, border_size_km)
-    return f"POLYGON(({xmin} {ymin}, {xmax} {ymin}, {xmax} {ymax}, {xmin} {ymax}, {xmin} {ymin}))"
+    lon_w, lat_s, lon_e, lat_n = tile_to_coord(x, y, zoom, border_size_km)
+    return f"POLYGON(({lat_s} {lon_w}, {lat_n} {lon_w}, {lat_n} {lon_e}, {lat_s} {lon_e}, {lat_s} {lon_w}))"
 
 
 def grid_fill(

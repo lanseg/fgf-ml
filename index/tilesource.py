@@ -33,10 +33,12 @@ class Tile:
     zoom: int
     objects: list[OsmObject]
 
-def _object_type_slicer(obj: OsmObject) -> str|None:
+
+def _object_type_slicer(obj: OsmObject) -> str | None:
     if isinstance(obj.geom, shapely.Polygon) and "building" in obj.tags:
         return "building"
     return None
+
 
 def slice(tile: Tile, key: Callable[[OsmObject], Hashable]) -> list[Tile]:
     grouped = collections.defaultdict(list)
@@ -44,8 +46,10 @@ def slice(tile: Tile, key: Callable[[OsmObject], Hashable]) -> list[Tile]:
         grouped[key(obj)].append(obj)
     return [Tile(tile.x, tile.y, tile.zoom, objects) for objects in grouped.values()]
 
+
 def slice_by_type(tile: Tile) -> list[Tile]:
     return slice(tile, _object_type_slicer)
+
 
 def from_db(
     db_path: str,
@@ -87,6 +91,6 @@ def from_db(
             y,
             zoom,
             len(objects),
-            envelope
+            envelope,
         )
         yield Tile(x, y, zoom, objects)

@@ -19,9 +19,10 @@ fi
 bounds="${areas[$requested_area]}"
 echo "Processing area: $requested_area, bounds: $bounds"
 
-python pipeline/main.py  \
-    --tile_size_km 0.5   \
+mkdir -p "./indices/$requested_area"
+python index/main.py  \
+    --tile_size_km 0.2   \
     --border_size_km 0.2 \
     --bounds $bounds \
     data/osm/switzerland-latest.duckdb \
-    ./indices/$requested_area/$requested_area.faiss 2>&1 | tee "indices/$requested_area/$requested_area.log"
+    ./indices/$requested_area 2>&1 | tee "./indices/$requested_area.log"

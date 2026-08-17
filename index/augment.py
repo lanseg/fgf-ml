@@ -45,6 +45,7 @@ def get_neighbors(geoms: list[Geometry]) -> list[tuple[int, ...]]:
         )
     )
 
+
 def unite_tile(tile: tilesource.Tile) -> tilesource.Tile:
     objects = []
     for component, originals in geom.mapping_union([o.geom for o in tile.objects]):
@@ -76,11 +77,11 @@ def variants(tile: tilesource.Tile) -> Iterable[tilesource.Tile]:
         for group in get_neighbors([o.geom for o in tile.objects])
     ]
     logger.info(
-            "generated %d variants for tile: %d/%d/%d with %d objects",
-            len(result),
-            tile.x,
-            tile.y,
-            tile.zoom,
-            len(tile.objects),
-        )
+        "generated %d variants for tile: %d/%d/%d with %d objects",
+        len(result),
+        tile.x,
+        tile.y,
+        tile.zoom,
+        len(tile.objects),
+    )
     return result
