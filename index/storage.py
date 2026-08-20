@@ -7,6 +7,8 @@ from pathlib import Path
 import faiss
 import numpy as np
 
+import tilesource
+
 BATCH_SIZE = 100000
 
 logger = logging.getLogger("storage")
@@ -132,7 +134,7 @@ class Storage:
             self.batch_count += 1
             self._init_index()
 
-    def find(self, emb: np.array, top_k: int) -> list[Tile]:
+    def find(self, emb: np.array, top_k: int) -> list[tilesource.Tile]:
         result = {}
         _vector = np.array([emb])
         faiss.normalize_L2(_vector)
