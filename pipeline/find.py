@@ -30,7 +30,7 @@ def find_in_file(index_file: Path, vec: np.ndarray, top_k: int):
         for d in data:
             (id, x, y, z) = tuple(map(int, d.split(" ")))
             index_metadata[id] = (x, y, z)
-    
+
     logger.info("Loaded index metadata for %d vectors.", len(index_metadata))
 
     k = args.top_k
@@ -48,6 +48,7 @@ def find_in_file(index_file: Path, vec: np.ndarray, top_k: int):
                 result[tile] = dist
         k *= 2
     return result
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Find tiles similar geometries.")

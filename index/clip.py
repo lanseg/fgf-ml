@@ -16,17 +16,6 @@ class CLIPEmbeddingGenerator:
         self.processor = CLIPProcessor.from_pretrained(model_name)
         self.model.eval()  # Set to evaluation mode
 
-    def rasterize_geometry(self, geoms, img_size=224):
-        """Renders polygons on a PIL canvas."""
-        canvas = np.zeros((img_size, img_size), dtype=np.uint8)
-
-        for poly in geoms:
-            points = shapely.get_coordinates(poly).astype(np.int32)
-            cv2.fillPoly(canvas, [points], color=255)
-
-        # Image.fromarray(canvas).convert("RGB").save("input.png")
-        return Image.fromarray(canvas).convert("RGB")
-
     @torch.no_grad()
     def generate_batch_embeddings(self, images: list[Image.Image]) -> np.ndarray:
         """Generates embeddings for a batch of images simultaneously."""

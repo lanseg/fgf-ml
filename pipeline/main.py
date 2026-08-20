@@ -5,12 +5,13 @@ import time
 from itertools import chain
 from multiprocessing import Pool, cpu_count
 
+import clip
+import raster
+import tilesource
+
 import augment
 import features
 import storage
-import tilesource
-import clip
-import raster
 
 BATCH_SIZE = 1000
 
@@ -66,8 +67,7 @@ if __name__ == "__main__":
         baseTiles = tilesource.get_tiles(
             args.db_path, args.tile_size_km, args.border_size_km, bounds
         )
-        vectors = p.imap_unordered(
-            pipeline, filter(lambda x: x.objects, baseTiles))
+        vectors = p.imap_unordered(pipeline, filter(lambda x: x.objects, baseTiles))
         for i, fv in enumerate(chain.from_iterable(vectors)):
             index.add(i, fv)
 

@@ -33,6 +33,9 @@ class Tile:
     zoom: int
     objects: list[OsmObject]
 
+    def __str__(self) -> str:
+        return f"Tile({self.x}/{self.y}/{self.zoom}; {len(self.objects)})"
+
 
 def _object_type_slicer(obj: OsmObject) -> str | None:
     if isinstance(obj.geom, shapely.Polygon) and "building" in obj.tags:

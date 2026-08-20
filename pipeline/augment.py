@@ -2,11 +2,11 @@ import logging
 from collections.abc import Iterable
 
 import shapely
+import tilesource
 
 import distort
 import geom
 import subsets
-import tilesource
 
 logger = logging.getLogger("process")
 
