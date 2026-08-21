@@ -39,8 +39,7 @@ if __name__ == "__main__":
 
     wkts = []
     for i, (tile, dist) in enumerate(sorted(results.items(), key=lambda x: x[1])):
-        wkts.append(geom.envelope_wkt(*tile))
-        logger.info("Match %d: score: %f, tile: (%d, %d, %d)", i, dist, tile[0], tile[1], tile[2])
-        if i > args.top_k:
-            break
+        awkt = geom.envelope_wkt(*tile)
+        wkts.append(awkt)
+        logger.info("Match %d: score: %f, tile: (%d, %d, %d) -> %s", i, dist, tile[0], tile[1], tile[2], awkt)
     print(f"GEOMETRYCOLLECTION({', '.join(wkts)})")

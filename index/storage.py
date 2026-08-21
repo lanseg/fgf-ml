@@ -136,7 +136,6 @@ class Storage:
     def find(self, emb: np.array, top_k: int) -> list[tilesource.Tile]:
         result = {}
         _vector = np.array([emb])
-        faiss.normalize_L2(_vector)
         for f in Path(self.index_root).iterdir():
             if not f.suffix.startswith(".faiss"):
                 continue
@@ -146,7 +145,7 @@ class Storage:
                 if k not in result or result[k] < v:
                     result[k] = v
             logger.info("searched %s, found %d (%d total)", f.name, len(shard_result), len(result))
-        return result
+        return dict(list(sorted(result.items(), key=lambda x: x[1]))[:top_k])
 
     def flush(self):
         logger.info("saving the last batch")
