@@ -31,7 +31,7 @@ if __name__ == "__main__":
     s = transform.fit(shape(json.loads(args.geom)), (0, 0, img_size, img_size), keep_aspect=True)
     generator = clip.CLIPEmbeddingGenerator()
 
-    img = generator.rasterize_geometry(s.geoms, img_size)
+    img = clip.rasterize_geometry(s.geoms, img_size)
     emb = generator.generate_batch_embeddings([img])[0]
 
     index = storage.Storage(pathlib.Path(args.index), 512)

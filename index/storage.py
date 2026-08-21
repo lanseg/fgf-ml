@@ -50,16 +50,15 @@ class Shard:
         if not self.open:
             self._open()
         self.index.add_with_ids(np.array([fv.vector]), np.array([id]))
-        self.metadata[id] = f"{fv.tile[0]},{fv.tile[1]},{fv.tile[2]}"
+        self.metadata[str(id)] = f"{fv.tile[0]},{fv.tile[1]},{fv.tile[2]}"
 
     def find(self, emb: np.array, top_k: int):
         if not self.open:
             self._open()
         result = collections.defaultdict(lambda: float("inf"))
-        k = self.index.ntotal
+        k = top_k
         while len(result) < top_k and k <= self.index.ntotal:
             distances, indices = self.index.search(emb, k)
-            print(f"FOUND AT {self.index_file}")
             for i in range(k):
                 idx = str(indices[0][i]).encode("utf-8")
                 dist = distances[0][i]
@@ -146,6 +145,7 @@ class Storage:
             for k, v in shard_result.items():
                 if k not in result or result[k] < v:
                     result[k] = v
+            logger.info("searched %s, found %d (%d total)", f.name, len(shard_result), len(result))
         return result
 
     def flush(self):

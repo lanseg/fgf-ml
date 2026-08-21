@@ -6,6 +6,19 @@ import torch.nn.functional as F
 from PIL import Image
 from transformers import CLIPModel, CLIPProcessor
 
+import transform
+
+def rasterize_geometry(geoms, img_size=224):
+    """Renders polygons on a PIL canvas."""
+    canvas = np.zeros((img_size, img_size), dtype=np.uint8)
+
+    for poly in geoms:
+        points = shapely.get_coordinates(poly).astype(np.int32)
+        cv2.fillPoly(canvas, [points], color=255)
+
+    # Image.fromarray(canvas).convert("RGB").save("input.png")
+    return Image.fromarray(canvas).convert("RGB")
+
 
 class CLIPEmbeddingGenerator:
     def __init__(self, model_name="openai/clip-vit-base-patch32"):
@@ -21,7 +34,6 @@ class CLIPEmbeddingGenerator:
         """Generates embeddings for a batch of images simultaneously."""
 
         # Convert all images to RGB
-        images = [img.convert("RGB") if img.mode != "RGB" else img for img in images]
         inputs = self.processor(images=images, return_tensors="pt").to(self.device)
         outputs = self.model.get_image_features(**inputs)
 

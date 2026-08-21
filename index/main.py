@@ -5,6 +5,10 @@ import time
 from itertools import batched, chain
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
+import atexit
+import sys
+import faulthandler
+import tracemalloc
 
 import cv2
 import numpy as np
@@ -31,15 +35,25 @@ nproc = min(16, max(1, cpu_count() - 2))
 def rasterize_tile(tile, img_size=224):
     geoms = shapely.GeometryCollection([o.geom for o in tile.objects])
     obj = transform.fit(geoms, (0, 0, img_size, img_size), keep_aspect=True)
-    canvas = np.zeros((img_size, img_size), dtype=np.uint8)
+    return clip.rasterize_geometry(obj.geoms)
 
-    for poly in obj.geoms:
-        points = shapely.get_coordinates(poly).astype(np.int32)
-        cv2.fillPoly(canvas, [points], color=255)
 
-    # Image.fromarray(canvas).convert("RGB").save("input.png")
-    return Image.fromarray(canvas).convert("RGB")
+def init_worker():
+    faulthandler.enable(all_threads=True)
+    sys.stdout.reconfigure(line_buffering=True)
+    tracemalloc.start(10)
 
+    # Store the baseline snapshot at process start
+    global _baseline
+    _baseline = tracemalloc.take_snapshot()
+
+def exit_worker():
+    if tracemalloc.is_tracing():
+        current = tracemalloc.take_snapshot()
+        diff = current.compare_to(_baseline, "lineno")
+        log.info("=== Memory delta for this worker process ===")
+        for stat in diff[:15]:
+            log.info(str(stat))
 
 def pipeline(baseTile: tilesource.Tile) -> list[tilesource.Tile]:
     start = time.time()
@@ -86,8 +100,9 @@ if __name__ == "__main__":
     generator = clip.CLIPEmbeddingGenerator()
     index = storage.Storage(pathlib.Path(args.index), 512)
 
-    with Pool(nproc) as p:
+    with Pool(nproc, initializer=init_worker) as p:
         baseTiles = tilesource.from_db(args.db_path, args.tile_size_km, args.border_size_km, bounds)
+        atexit.register(exit_worker)
 
         i = 0
         for batch in batched(
