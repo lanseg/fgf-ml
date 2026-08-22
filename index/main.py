@@ -29,7 +29,7 @@ logger = logging.getLogger("main")
 
 img_size = 224
 clip_batch_size = 128
-nproc = min(16, max(1, cpu_count() - 2))
+nproc = min(8, max(1, cpu_count() - 2))
 
 
 def rasterize_tile(tile, img_size=224):
@@ -38,41 +38,19 @@ def rasterize_tile(tile, img_size=224):
     return clip.rasterize_geometry(obj.geoms)
 
 
-def init_worker():
-    faulthandler.enable(all_threads=True)
-    sys.stdout.reconfigure(line_buffering=True)
-    tracemalloc.start(10)
-
-    # Store the baseline snapshot at process start
-    global _baseline
-    _baseline = tracemalloc.take_snapshot()
-
-def exit_worker():
-    if tracemalloc.is_tracing():
-        current = tracemalloc.take_snapshot()
-        diff = current.compare_to(_baseline, "lineno")
-        log.info("=== Memory delta for this worker process ===")
-        for stat in diff[:15]:
-            log.info(str(stat))
-
 def pipeline(baseTile: tilesource.Tile) -> list[tilesource.Tile]:
     start = time.time()
     sliced = tilesource.slice_by_type(baseTile)
     buildings = filter(lambda tile: "building" in tile.objects[0].tags, sliced)
     united = map(augment.unite_tile, buildings)
     variants = list(chain.from_iterable(map(augment.variants, united)))
-    aug_time = time.time()
-    result = [(v, rasterize_tile(v, img_size)) for v in variants]
-    raster_time = time.time()
     logger.info(
-        "Processed tile %s in %d seconds: variants=%d, aug_time=%d, raster_time=%d",
+        "augmented tile %s in %d seconds: variants=%d",
         baseTile,
-        raster_time - start,
-        len(variants),
-        aug_time - start,
-        raster_time - aug_time,
+        time.time() - start,
+        len(variants)
     )
-    return result
+    return variants
 
 
 if __name__ == "__main__":
@@ -100,17 +78,16 @@ if __name__ == "__main__":
     generator = clip.CLIPEmbeddingGenerator()
     index = storage.Storage(pathlib.Path(args.index), 512)
 
-    with Pool(nproc, initializer=init_worker) as p:
+    with Pool(nproc) as p:
         baseTiles = tilesource.from_db(args.db_path, args.tile_size_km, args.border_size_km, bounds)
-        atexit.register(exit_worker)
 
         i = 0
-        for batch in batched(
+        for tiles in batched(
             chain.from_iterable(p.imap_unordered(pipeline, filter(lambda x: x.objects, baseTiles))),
             clip_batch_size,
         ):
-            tiles, imgs = list(zip(*batch))
             start = time.time()
+            imgs = [rasterize_tile(v, img_size) for v in tiles]
             embs = generator.generate_batch_embeddings(imgs)
             for tile, emb in zip(tiles, embs):
                 index.add(i, storage.TileEmbedding(tile=(tile.x, tile.y, tile.zoom), vector=emb))

@@ -64,7 +64,7 @@ def from_db(
     bounds: tuple[float, float, float, float] | None = None,
 ) -> Generator[Tile]:
     zoom = geom.km_to_zoom(tile_size_km)
-    total_tiles, tile_stream = geom.grid_fill(tile_size_km, border_size_km, bounds)
+    total_tiles, tile_stream = geom.grid_fill(tile_size_km, bounds)
     logger.info(
         "generating tiles with side ~%.2fkm with ~%.2fkm border, zoom: %d, total tiles: %s",
         tile_size_km,

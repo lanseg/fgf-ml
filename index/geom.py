@@ -56,7 +56,7 @@ def tile_to_coord(x: int, y: int, zoom: int, border_size_km: float = 0) -> (int,
     lat_deg_s = merc_y_to_lat((y + 1) / n)
     if border_size_km > 0:
         lon_deg_w, lat_deg_s, lon_deg_e, lat_deg_n = expand_bounding_box(
-            lon_deg_w, lat_deg_s, lon_deg_e, lat_deg_n, border_size_km
+            lon_deg_w, lat_deg_s, lon_deg_e, lat_deg_n, 1000*border_size_km
         )
     return lon_deg_w, lat_deg_s, lon_deg_e, lat_deg_n
 
@@ -106,7 +106,6 @@ def envelope_wkt(x: int, y: int, zoom: int, border_size_km: float = 0) -> str:
 
 def grid_fill(
     tile_size_km: float,
-    border_size_km: float = 0,
     bounds: tuple[float, float, float, float] | None = None,
 ):
     """Fills an area with rectangles, from top-left to bottom-right with overlapping if needed."""
