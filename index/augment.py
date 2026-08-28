@@ -75,6 +75,7 @@ def variants(tile: tilesource.Tile) -> Iterable[tilesource.Tile]:
     result = [tilesource.Tile(tile.x, tile.y, tile.zoom, objects=tile.objects)] + [
         tilesource.Tile(tile.x, tile.y, tile.zoom, objects=[tile.objects[i] for i in group])
         for group in get_neighbors([o.geom for o in tile.objects])
+        if len(group) < 4
     ]
     logger.info(
         "generated %d variants for tile: %d/%d/%d with %d objects",

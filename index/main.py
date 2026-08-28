@@ -1,14 +1,14 @@
 import argparse
+import atexit
+import faulthandler
 import logging
 import pathlib
+import sys
 import time
+import tracemalloc
 from itertools import batched, chain
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
-import atexit
-import sys
-import faulthandler
-import tracemalloc
 
 import cv2
 import numpy as np
@@ -45,10 +45,11 @@ def pipeline(baseTile: tilesource.Tile) -> list[tilesource.Tile]:
     united = map(augment.unite_tile, buildings)
     variants = list(chain.from_iterable(map(augment.variants, united)))
     logger.info(
-        "augmented tile %s in %d seconds: variants=%d",
-        baseTile,
-        time.time() - start,
-        len(variants)
+        "augmented tile %s in %d seconds: variants=%d", baseTile, time.time() - start, len(variants)
+    )
+    variants = list(filter(lambda tile: len(tile.objects) < 5), variants)
+    logger.info(
+        "reduced number of variants for %s to %d", baseTile, len(variants)
     )
     return variants
 
@@ -76,7 +77,7 @@ if __name__ == "__main__":
         logger.info("using bounds %s", bound_values)
 
     generator = clip.CLIPEmbeddingGenerator()
-    index = storage.Storage(pathlib.Path(args.index), 512)
+    index = storage.Storage(pathlib.Path(args.index), generator.embedding_dim)
 
     with Pool(nproc) as p:
         baseTiles = tilesource.from_db(args.db_path, args.tile_size_km, args.border_size_km, bounds)
@@ -99,6 +100,6 @@ if __name__ == "__main__":
                 i,
                 emb_time - start,
                 tiles[0],
-                tiles[-1]
+                tiles[-1],
             )
     index.flush()

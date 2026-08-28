@@ -3,8 +3,10 @@ import math
 import osmium
 import pyproj
 import shapely
-from pyproj import Transformer
+from pyproj import Geod, Transformer
 from shapely import strtree
+
+GEOD = Geod(ellps="WGS84")
 
 DEFAULT_PROJ = "EPSG:4326"
 DEFAULT_DATUM = "WGS84"
@@ -16,18 +18,43 @@ WEB_MERCATOR_MAX = WEB_MERCATOR_RADIUS * math.pi  # ≈ 20037508.342789244
 INITIAL_RESOLUTION = 2 * math.pi * WEB_MERCATOR_RADIUS / 256.0  # ≈ 156543 (metres/pixel at zoom 0)
 
 
-def expand_bounding_box(lon1, lat1, lon2, lat2, add_m):
-    """Expand using local UTM projection for best accuracy"""
-    box = shapely.box(min(lon1, lon2), min(lat1, lat2), max(lon1, lon2), max(lat1, lat2))
-    center = box.centroid
-    local_crs = f"+proj=aeqd +lat_0={center.y} +lon_0={center.x} +datum={DEFAULT_DATUM} +units=m"
+def expand_bounding_box(
+    lon1: float,
+    lat1: float,
+    lon2: float,
+    lat2: float,
+    meters: float,
+) -> tuple[float, float, float, float]:
+    """Expand a WGS84 lon/lat rectangle by `meters` in all directions."""
 
-    to_metric = pyproj.Transformer.from_crs(DEFAULT_PROJ, local_crs, always_xy=True).transform
+    if meters < 0:
+        raise ValueError("meters must be non-negative")
+    if not (-90 <= lat1 <= 90 and -90 <= lat2 <= 90):
+        raise ValueError("latitudes must be in [-90, 90]")
 
-    to_wgs84 = pyproj.Transformer.from_crs(local_crs, DEFAULT_PROJ, always_xy=True).transform
+    # Unwrap longitudes so an antimeridian-crossing rectangle stays small.
+    dlon = (lon2 - lon1 + 180) % 360 - 180
+    west, east = (lon1, lon1 + dlon) if dlon >= 0 else (lon2, lon2 - dlon)
+    south, north = sorted((lat1, lat2))
 
-    expanded = shapely.transform(box, to_metric, interleaved=False).buffer(add_m, join_style=2)
-    return shapely.transform(expanded, to_wgs84, interleaved=False).bounds
+    # Expand north/south using the meridional geodesic.
+    _, south, _ = GEOD.fwd(west, south, 180, meters)
+    _, north, _ = GEOD.fwd(west, north, 0, meters)
+
+    # Expand west/east using the parallel through the rectangle midpoint.
+    mid_lat = (lat1 + lat2) / 2
+    west, _, _ = GEOD.fwd(west, mid_lat, 270, meters)
+    east, _, _ = GEOD.fwd(east, mid_lat, 90, meters)
+
+    west %= 360
+    east %= 360
+
+    if west > 180:
+        west -= 360
+    if east > 180:
+        east -= 360
+
+    return west, south, east, north
 
 
 def km_to_zoom(km: float) -> int:
@@ -56,7 +83,7 @@ def tile_to_coord(x: int, y: int, zoom: int, border_size_km: float = 0) -> (int,
     lat_deg_s = merc_y_to_lat((y + 1) / n)
     if border_size_km > 0:
         lon_deg_w, lat_deg_s, lon_deg_e, lat_deg_n = expand_bounding_box(
-            lon_deg_w, lat_deg_s, lon_deg_e, lat_deg_n, 1000*border_size_km
+            lon_deg_w, lat_deg_s, lon_deg_e, lat_deg_n, 1000 * border_size_km
         )
     return lon_deg_w, lat_deg_s, lon_deg_e, lat_deg_n
 

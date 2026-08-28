@@ -2,11 +2,14 @@ import cv2
 import numpy as np
 import shapely
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image
+from torchvision import models, transforms
 from transformers import CLIPModel, CLIPProcessor
 
 import transform
+
 
 def rasterize_geometry(geoms, img_size=224):
     """Renders polygons on a PIL canvas."""
@@ -21,31 +24,66 @@ def rasterize_geometry(geoms, img_size=224):
 
 
 class CLIPEmbeddingGenerator:
-    def __init__(self, model_name="openai/clip-vit-base-patch32"):
-        """Initializes the pre-trained CLIP model and processor from HuggingFace."""
-        print(f"Loading CLIP model: {model_name}...")
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = CLIPModel.from_pretrained(model_name).to(self.device)
-        self.processor = CLIPProcessor.from_pretrained(model_name)
-        self.model.eval()  # Set to evaluation mode
+    def __init__(self, model_name="convnext", device=None):
+        if device is None:
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        else:
+            self.device = device
+
+        print(f"Loading {model_name} model on {self.device}...")
+
+        # 1. Load the pre-trained model and strip the final classification layer
+        if model_name == "convnext":
+            # ConvNeXt Small
+            weights = models.ConvNeXt_Small_Weights.DEFAULT
+            base_model = models.convnext_small(weights=weights)
+
+            # ConvNeXt's classifier is a Sequential block.
+            # The final layer (index 2) is the 1000-class Linear layer.
+            # We replace it with Identity to output the raw 768-dim features.
+            base_model.classifier[2] = nn.Identity()
+            self.embedding_dim = 768
+
+        elif model_name == "resnet50":
+            weights = models.ResNet50_Weights.DEFAULT
+            base_model = models.resnet50(weights=weights)
+
+            # ResNet's final layer is named 'fc'. Replace it with Identity.
+            base_model.fc = nn.Identity()
+            self.embedding_dim = 2048
+
+        else:
+            raise ValueError("model_name must be 'convnext' or 'resnet50'")
+
+        self.model = base_model.to(self.device)
+        self.model.eval()
+
+        # 2. Standard ImageNet Preprocessing Pipeline
+        self.transform = transforms.Compose(
+            [
+                transforms.Resize((512, 512)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ]
+        )
 
     @torch.no_grad()
     def generate_batch_embeddings(self, images: list[Image.Image]) -> np.ndarray:
-        """Generates embeddings for a batch of images simultaneously."""
+        """Generates embeddings for a batch of images to saturate the GPU."""
+        tensor_list = []
+        for img in images:
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+            tensor_list.append(self.transform(img))
 
-        # Convert all images to RGB
-        inputs = self.processor(images=images, return_tensors="pt").to(self.device)
-        outputs = self.model.get_image_features(**inputs)
+        # Stack into [Batch, Channels, Height, Width]
+        batch_tensor = torch.stack(tensor_list).to(self.device)
 
-        if hasattr(outputs, "image_embeds"):
-            features = outputs.image_embeds
-        elif hasattr(outputs, "pooler_output"):
-            features = outputs.pooler_output
-        elif isinstance(outputs, torch.Tensor):
-            features = outputs
-        else:
-            features = outputs[0]
+        # Use mixed precision for a massive speedup on RTX 4090/Ada cards
+        with torch.autocast(
+            device_type="cuda" if "cuda" in self.device else "cpu", dtype=torch.float16
+        ):
+            features = self.model(batch_tensor)
 
-        # Normalize the batch and return an (N, 512) 2D array where N is a batch size
         normalized_embeddings = F.normalize(features, p=2, dim=1)
         return normalized_embeddings.cpu().numpy().astype(np.float32)

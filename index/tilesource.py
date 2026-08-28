@@ -13,9 +13,11 @@ import geom
 logger = logging.getLogger(__name__)
 PROJ = "WGS84"
 
+
 @dataclass
 class Lineage:
     pass
+
 
 @dataclass
 class OsmObject:

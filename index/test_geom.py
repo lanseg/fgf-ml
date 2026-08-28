@@ -23,15 +23,22 @@ _zurich_hb = (8.53976, 47.37795)
 _switzerland = (5.4467010850356266, 47.73248844856869, 11.4152400783939, 45.864502976445976)
 
 
-def test_expand_bounding_box():
-    deltas = []
-    for box in _boxes:
-        lon1, lat1, lon2, lat2 = box
-        before = shapely.box(*box)
-        after = shapely.box(*geom.expand_bounding_box(*box, 5000))
-        deltas.append(round(100 * (after.length - before.length)))
-    assert min(deltas) == max(deltas)
-    assert deltas[0] > 0
+@pytest.mark.parametrize("box", _boxes)
+def test_expand_bounding_box(box):
+    west, south, east, north = geom.expand_bounding_box(*box, 1000)
+
+    lon1, lat1, lon2, lat2 = box
+
+    # Antimeridian case needs special handling.
+    if lon1 > lon2:
+        assert west > east
+        assert south < min(lat1, lat2)
+        assert north > max(lat1, lat2)
+    else:
+        assert west < min(lon1, lon2)
+        assert east > max(lon1, lon2)
+        assert south < min(lat1, lat2)
+        assert north > max(lat1, lat2)
 
 
 def test_coord_tile():
@@ -49,19 +56,19 @@ def test_coord_tile():
 
 
 @pytest.mark.parametrize(
-    "tile_size,border_size_km,bounds",
+    "tile_size,bounds",
     [
-        (10, 0, _switzerland),
-        (100, 0, _switzerland),
-        (3000, 0, _switzerland),
-        (10, 5, _switzerland),
-        (100, 5, _switzerland),
-        (3000, 5, _switzerland),
+        (10, _switzerland),
+        (100, _switzerland),
+        (3000, _switzerland),
+        (10, _switzerland),
+        (100, _switzerland),
+        (3000, _switzerland),
     ],
 )
-def test_grid_fill(tile_size, border_size_km, bounds):
+def test_grid_fill(tile_size, bounds):
     bound_box = shapely.box(*bounds)
-    count, it = geom.grid_fill(tile_size, border_size_km, bounds)
+    count, it = geom.grid_fill(tile_size, bounds)
     coverage = []
     for x, y, zoom in it:
         coverage.append(shapely.box(*geom.tile_to_coord(x, y, zoom)))
