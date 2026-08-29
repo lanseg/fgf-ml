@@ -8,8 +8,9 @@ from PIL import Image
 from torchvision import models, transforms
 from transformers import CLIPModel, CLIPProcessor
 
-import transform
+import logging
 
+logger = logging.getLogger("clip")
 
 def rasterize_geometry(geoms, img_size=224):
     """Renders polygons on a PIL canvas."""
@@ -25,12 +26,16 @@ def rasterize_geometry(geoms, img_size=224):
 
 class CLIPEmbeddingGenerator:
     def __init__(self, model_name="convnext", device=None):
-        if device is None:
-            self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        else:
+        if device is not None:
             self.device = device
+        elif torch.backends.mps.is_available():
+            self.device = "mps"
+        elif torch.cuda.is_available():
+            self.device = "cuda"
+        else:
+            self.device = "cpu"
 
-        print(f"Loading {model_name} model on {self.device}...")
+        logger.info(f"Loading {model_name} model on {self.device}...")
 
         # 1. Load the pre-trained model and strip the final classification layer
         if model_name == "convnext":
@@ -78,7 +83,6 @@ class CLIPEmbeddingGenerator:
 
         # Stack into [Batch, Channels, Height, Width]
         batch_tensor = torch.stack(tensor_list).to(self.device)
-
         # Use mixed precision for a massive speedup on RTX 4090/Ada cards
         with torch.autocast(
             device_type="cuda" if "cuda" in self.device else "cpu", dtype=torch.float16

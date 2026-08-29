@@ -28,7 +28,7 @@ logging.basicConfig(
 logger = logging.getLogger("main")
 
 img_size = 224
-clip_batch_size = 128
+clip_batch_size = 16
 nproc = min(8, max(1, cpu_count() - 2))
 
 
@@ -44,12 +44,13 @@ def pipeline(baseTile: tilesource.Tile) -> list[tilesource.Tile]:
     buildings = filter(lambda tile: "building" in tile.objects[0].tags, sliced)
     united = map(augment.unite_tile, buildings)
     variants = list(chain.from_iterable(map(augment.variants, united)))
+    count_before = len(variants)
     logger.info(
-        "augmented tile %s in %d seconds: variants=%d", baseTile, time.time() - start, len(variants)
+        "augmented tile %s in %d seconds: variants=%d", baseTile, time.time() - start, count_before
     )
-    variants = list(filter(lambda tile: len(tile.objects) < 5), variants)
+    variants = list(filter(lambda tile: len(tile.objects) < 5, variants))
     logger.info(
-        "reduced number of variants for %s to %d", baseTile, len(variants)
+        "reduced number of variants for %s from %d to %d", baseTile, count_before, len(variants)
     )
     return variants
 
@@ -89,7 +90,9 @@ if __name__ == "__main__":
         ):
             start = time.time()
             imgs = [rasterize_tile(v, img_size) for v in tiles]
+            logger.info("generated rasters for tiles %s... %s", tiles[0], tiles[-1])
             embs = generator.generate_batch_embeddings(imgs)
+            logger.info("generated embeddings for tiles %s... %s", tiles[0], tiles[-1])
             for tile, emb in zip(tiles, embs):
                 index.add(i, storage.TileEmbedding(tile=(tile.x, tile.y, tile.zoom), vector=emb))
                 i += 1
