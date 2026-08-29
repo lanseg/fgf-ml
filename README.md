@@ -11,9 +11,10 @@ from billions to thousands (which is an acceptable amount for the Affine/Jaccard
 
 # Current status
 
-I implemented a feature vector generation, indexing and search, but search is not reliable yet, so
-I'm working on selecting good features and metrics and a way for a quicker and easy "hypothesis"
-validation.
+It can build FAISS index for a given area and then search for a given vector drawing in this index.
+* I split index into multiple files so it can fit into memory
+* I use GeoJSON in the search query only for ease of experimentation, so I can draw in a GIS tool
+and paste the drawing in the search query.
 
 # Workflow
 
@@ -65,11 +66,11 @@ python ./pipeline/tilesource.py \
 
 ```bash
 # Build an index for canton Zurich (approximately, includes neighbouring cantons too)
-python pipeline/main.py  \
+python index/main.py  \
     --tile_size_km 1 \
     --bounds 47.0394,8.2243,47.7394,9.0996 \
     data/osm/switzerland-latest.duckdb \
-    ./indices/kanton_zurich.faiss
+    ./indices/kanton_zurich
 ```
 
 There is a convenience script with some of the locations with their bounds: [get_index.sh](get_index.sh)
@@ -79,8 +80,8 @@ Geojson is used only for ease of testing, so I could select some buildings on a 
 if the finder will be able to find the tile.
 
 ```bash
-python pipeline/find.py \
-    ./indices/kanton_zurich.faiss \
+python index/find.py \
+    ./indices/kanton_zurich \
     "SOME_GEOJSON"
 ```
 
@@ -98,5 +99,16 @@ The whole process looks like this:
     1. Merge buildings that share the walls (unary_union)
     1. Apply distortion: make tiles wobbly and more man-made looking
     1. Generate various subsets of the tile
-4. Vectorize the tile (fit into [-1, -1, 1, 1] with fixed aspect ratio and calculate Hu moments)
+4. Generate embedding vectors using some pytorch model
 5. Save tile vector to the FAISS index and tile coordinates to a list
+
+## Approach history
+
+1. Computational geometry only: apply affine transformations to the query drawing, place it on a
+tile and calculate intersection-to-union ratio, make it as close to 1 as possible using
+scipy.optimize. Quite precise and robust, but takes almost an hour for a city like Zurich. *I'm going
+to use to refine the results I got from the index.*
+2. Indexing using custom feature vectors based on image invariants - unpredictable quality and too
+much of fine-tuning and picking the right set of metrics.
+
+
