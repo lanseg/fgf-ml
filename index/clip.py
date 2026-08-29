@@ -1,3 +1,5 @@
+import logging
+
 import cv2
 import numpy as np
 import shapely
@@ -8,9 +10,8 @@ from PIL import Image
 from torchvision import models, transforms
 from transformers import CLIPModel, CLIPProcessor
 
-import logging
-
 logger = logging.getLogger("clip")
+
 
 def rasterize_geometry(geoms, img_size=224):
     """Renders polygons on a PIL canvas."""
@@ -25,6 +26,8 @@ def rasterize_geometry(geoms, img_size=224):
 
 
 class CLIPEmbeddingGenerator:
+    """Generated with a help of some chat bot."""
+
     def __init__(self, model_name="convnext", device=None):
         if device is not None:
             self.device = device

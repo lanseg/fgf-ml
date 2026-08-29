@@ -1,9 +1,27 @@
-data
-deps
-.vscode
-.venv
-.ruff_cache
-__pycache__
-.python_version
-indices
-tmp
+# Ignore everything
+*
+
+# Except
+Makefile
+get_index.sh
+
+index/augment.py
+index/test_augment.py
+
+index/clip.py
+index/find.py
+
+index/geom.py
+index/test_geom.py
+
+index/main.py
+index/storage.py
+
+index/tilesource.py
+index/test_tilesource.py
+
+index/transform.py
+index/test_transform.py
+
+index/pyproject.toml
+index/uv.lock
