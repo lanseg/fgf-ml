@@ -54,6 +54,19 @@ def pipeline(baseTile: tilesource.Tile) -> list[tilesource.Tile]:
     )
     return variants
 
+class ShapeParser(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super().__init__(option_strings, dest, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        values = shapely.box(*map(float, values.split(",")))
+        setattr(namespace, self.dest, values)
+
+def parseBounds(*args, **kwargs):
+    """Parse bounds from a string of four comma-separated floats."""
+    print("Parsing bounds:", args, kwargs)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate tile stream tiles from the database.")
@@ -65,17 +78,13 @@ if __name__ == "__main__":
     parser.add_argument("index", type=str, help="Target where to dump the search index")
     parser.add_argument(
         "--bounds",
+        action=ShapeParser,
         help="Region bounds as four comma-separated floats: lon,lat,lon,lat",
     )
     args = parser.parse_args()
 
-    bounds = None
-    if args.bounds:
-        bound_values = list(map(float, args.bounds.split(",")))
-        lons = [bound_values[0], bound_values[2]]
-        lats = [bound_values[1], bound_values[3]]
-        bounds = (min(*lons), max(*lats), max(*lons), min(*lats))
-        logger.info("using bounds %s", bound_values)
+    bounds = args.bounds
+    logger.info("using bounds %s", bounds)
 
     generator = clip.CLIPEmbeddingGenerator()
     index = storage.Storage(pathlib.Path(args.index), generator.embedding_dim)

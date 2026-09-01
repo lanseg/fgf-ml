@@ -68,7 +68,7 @@ def test_coord_tile():
 )
 def test_grid_fill(tile_size, bounds):
     bound_box = shapely.box(*bounds)
-    count, it = geom.grid_fill(tile_size, bounds)
+    count, it = geom.grid_fill(tile_size, bound_box)
     coverage = []
     for x, y, zoom in it:
         coverage.append(shapely.box(*geom.tile_to_coord(x, y, zoom)))

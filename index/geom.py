@@ -109,13 +109,15 @@ def get_tile_bounds(items: list[osmium.osm.Location], zoom: int):
     return (min(tx0, tx1), min(ty0, ty1), max(tx0, tx1), max(ty0, ty1))
 
 
-def tiles_for_box(lon1, lat1, lon2, lat2, zoom):
+def tiles_for_box(bounds: shapely.Polygon, zoom: int):
     """
     Input bbox in EPSG:4326 (lon/lat). Returns inclusive ranges:
     (x_min, x_max, y_min, y_max)
     """
-    x_min, y_max = coord_to_tile(lon1, lat2, zoom)  # note: lat2 → y_max
-    x_max, y_min = coord_to_tile(lon2, lat1, zoom)  # south → y_min
+    lon1, lat1, lon2, lat2 = bounds.bounds
+
+    x_min, y_min = coord_to_tile(lon1, lat2, zoom)  # note: lat2 → y_max
+    x_max, y_max = coord_to_tile(lon2, lat1, zoom)  # south → y_min
     # Clamp to valid tile indices
     max_index = 2**zoom - 1
     x_min = max(0, min(x_min, max_index))
@@ -131,17 +133,14 @@ def envelope_wkt(x: int, y: int, zoom: int, border_size_km: float = 0) -> str:
     return f"POLYGON(({lon_w} {lat_s}, {lon_w} {lat_n}, {lon_e} {lat_n}, {lon_e} {lat_s}, {lon_w} {lat_s}))"
 
 
-def grid_fill(
-    tile_size_km: float,
-    bounds: tuple[float, float, float, float] | None = None,
-):
+def grid_fill(tile_size_km: float, bounds: shapely.Polygon | None = None):
     """Fills an area with rectangles, from top-left to bottom-right with overlapping if needed."""
     zoom = km_to_zoom(tile_size_km)
     tiles_per_axis = 2**zoom
     x_min, x_max = 0, tiles_per_axis
     y_min, y_max = 0, tiles_per_axis
     if bounds:
-        x_min, x_max, y_min, y_max = tiles_for_box(*bounds, zoom)
+        x_min, x_max, y_min, y_max = tiles_for_box(bounds, zoom)
 
     def gen():
         for x in range(x_min, x_max + 1):

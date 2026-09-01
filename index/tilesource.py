@@ -63,9 +63,10 @@ def from_db(
     db_path: str,
     tile_size_km: float,
     border_size_km: float = 0,
-    bounds: tuple[float, float, float, float] | None = None,
+    bounds: shapely.Polygon | None = None,
 ) -> Generator[Tile]:
     zoom = geom.km_to_zoom(tile_size_km)
+    print(f"HERE-B: {geom.grid_fill(tile_size_km, bounds)}")    
     total_tiles, tile_stream = geom.grid_fill(tile_size_km, bounds)
     logger.info(
         "generating tiles with side ~%.2fkm with ~%.2fkm border, zoom: %d, total tiles: %s",
