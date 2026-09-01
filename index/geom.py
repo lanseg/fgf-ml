@@ -34,27 +34,27 @@ def expand_bounding_box(
 
     # Unwrap longitudes so an antimeridian-crossing rectangle stays small.
     dlon = (lon2 - lon1 + 180) % 360 - 180
-    west, east = (lon1, lon1 + dlon) if dlon >= 0 else (lon2, lon2 - dlon)
-    south, north = sorted((lat1, lat2))
+    new_lon1, new_lon2 = (lon1, lon1 + dlon) if dlon >= 0 else (lon2, lon2 - dlon)
+    new_lat1, new_lat2 = sorted((lat1, lat2))
 
     # Expand north/south using the meridional geodesic.
-    _, south, _ = GEOD.fwd(west, south, 180, meters)
-    _, north, _ = GEOD.fwd(west, north, 0, meters)
+    _, new_lat1, _ = GEOD.fwd(new_lon1, new_lat1, 180, meters)
+    _, new_lat2, _ = GEOD.fwd(new_lon1, new_lat2, 0, meters)
 
     # Expand west/east using the parallel through the rectangle midpoint.
     mid_lat = (lat1 + lat2) / 2
-    west, _, _ = GEOD.fwd(west, mid_lat, 270, meters)
-    east, _, _ = GEOD.fwd(east, mid_lat, 90, meters)
+    new_lon1, _, _ = GEOD.fwd(new_lon1, mid_lat, 270, meters)
+    new_lon2, _, _ = GEOD.fwd(new_lon2, mid_lat, 90, meters)
 
-    west %= 360
-    east %= 360
+    new_lon1 %= 360
+    new_lon2 %= 360
 
-    if west > 180:
-        west -= 360
-    if east > 180:
-        east -= 360
+    if new_lon1 > 180:
+        new_lon1 -= 360
+    if new_lon2 > 180:
+        new_lon2 -= 360
 
-    return west, south, east, north
+    return new_lon1, new_lat1, new_lon2, new_lat2
 
 
 def km_to_zoom(km: float) -> int:
@@ -109,13 +109,13 @@ def get_tile_bounds(items: list[osmium.osm.Location], zoom: int):
     return (min(tx0, tx1), min(ty0, ty1), max(tx0, tx1), max(ty0, ty1))
 
 
-def tiles_for_box(west, south, east, north, zoom):
+def tiles_for_box(lon1, lat1, lon2, lat2, zoom):
     """
     Input bbox in EPSG:4326 (lon/lat). Returns inclusive ranges:
     (x_min, x_max, y_min, y_max)
     """
-    x_min, y_max = coord_to_tile(west, north, zoom)  # note: north → y_max
-    x_max, y_min = coord_to_tile(east, south, zoom)  # south → y_min
+    x_min, y_max = coord_to_tile(lon1, lat2, zoom)  # note: lat2 → y_max
+    x_max, y_min = coord_to_tile(lon2, lat1, zoom)  # south → y_min
     # Clamp to valid tile indices
     max_index = 2**zoom - 1
     x_min = max(0, min(x_min, max_index))
@@ -128,7 +128,7 @@ def tiles_for_box(west, south, east, north, zoom):
 def envelope_wkt(x: int, y: int, zoom: int, border_size_km: float = 0) -> str:
     """Return the tile envelope as a WKT POLYGON (used directly in DuckDB)."""
     lon_w, lat_s, lon_e, lat_n = tile_to_coord(x, y, zoom, border_size_km)
-    return f"POLYGON(({lat_s} {lon_w}, {lat_n} {lon_w}, {lat_n} {lon_e}, {lat_s} {lon_e}, {lat_s} {lon_w}))"
+    return f"POLYGON(({lon_w} {lat_s}, {lon_w} {lat_n}, {lon_e} {lat_n}, {lon_e} {lat_s}, {lon_w} {lat_s}))"
 
 
 def grid_fill(

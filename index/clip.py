@@ -39,41 +39,18 @@ class CLIPEmbeddingGenerator:
             self.device = "cpu"
 
         logger.info(f"Loading {model_name} model on {self.device}...")
-
-        # 1. Load the pre-trained model and strip the final classification layer
-        if model_name == "convnext":
-            # ConvNeXt Small
-            weights = models.ConvNeXt_Small_Weights.DEFAULT
-            base_model = models.convnext_small(weights=weights)
-
-            # ConvNeXt's classifier is a Sequential block.
-            # The final layer (index 2) is the 1000-class Linear layer.
-            # We replace it with Identity to output the raw 768-dim features.
-            base_model.classifier[2] = nn.Identity()
-            self.embedding_dim = 768
-
-        elif model_name == "resnet50":
-            weights = models.ResNet50_Weights.DEFAULT
-            base_model = models.resnet50(weights=weights)
-
-            # ResNet's final layer is named 'fc'. Replace it with Identity.
-            base_model.fc = nn.Identity()
-            self.embedding_dim = 2048
-
-        else:
-            raise ValueError("model_name must be 'convnext' or 'resnet50'")
-
+        
+        base_model = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14')
+        self.embedding_dim = 384
         self.model = base_model.to(self.device)
         self.model.eval()
 
         # 2. Standard ImageNet Preprocessing Pipeline
-        self.transform = transforms.Compose(
-            [
-                transforms.Resize((512, 512)),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ]
-        )
+        self.transform = transforms.v2.Compose([
+              transforms.v2.Resize(560, interpolation=transforms.v2.InterpolationMode.BICUBIC),
+              transforms.v2.CenterCrop(560),
+              transforms.v2.ToTensor(),
+              transforms.v2.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),])
 
     @torch.no_grad()
     def generate_batch_embeddings(self, images: list[Image.Image]) -> np.ndarray:

@@ -48,7 +48,7 @@ def pipeline(baseTile: tilesource.Tile) -> list[tilesource.Tile]:
     logger.info(
         "augmented tile %s in %d seconds: variants=%d", baseTile, time.time() - start, count_before
     )
-    variants = list(filter(lambda tile: len(tile.objects) < 5, variants))
+    variants = list(filter(lambda tile: len(tile.objects) < 4, variants))
     logger.info(
         "reduced number of variants for %s from %d to %d", baseTile, count_before, len(variants)
     )
